@@ -6,10 +6,12 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@prisma/client": "^7.8.0",
     "@types/node": "latest",
     "@types/react": "latest",
     "@types/react-dom": "latest",
     "next": "latest",
+    "prisma": "^7.8.0",
     "react": "latest",
     "react-dom": "latest",
     "typescript": "latest"
