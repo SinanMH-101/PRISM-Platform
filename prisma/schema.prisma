@@ -2,6 +2,10 @@
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
 // Get a free hosted Postgres database in seconds: `npx create-db`
+generator erd {
+  provider = "prisma-erd-generator"
+  output   = "./ERD.svg"
+}
 
 generator client {
   provider = "prisma-client"
@@ -10,4 +14,129 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  role      Role
+  createdAt DateTime @default(now())
+
+  groupMemberships GroupMember[]
+  submissions      Submission[]
+  feedbackGiven    Feedback[]          @relation("FeedbackFrom")
+  feedbackReceived Feedback[]          @relation("FeedbackTo")
+  scoresReceived   ContributionScore[]
+  updatedAt        DateTime            @updatedAt
+}
+
+model Assessment {
+  id        String   @id @default(cuid())
+  name      String
+  unitCode  String
+  createdAt DateTime @default(now())
+
+  weeks     AssessmentWeek[]
+  classes   Class[]
+  updatedAt DateTime         @updatedAt
+}
+
+model Class {
+  id           String @id @default(cuid())
+  name         String
+  assessmentId String
+
+  assessment Assessment @relation(fields: [assessmentId], references: [id])
+  groups     Group[]
+  updatedAt  DateTime   @updatedAt
+}
+
+model Group {
+  id      String @id @default(cuid())
+  name    String
+  classId String
+
+  class       Class         @relation(fields: [classId], references: [id])
+  members     GroupMember[]
+  submissions Submission[]
+  updatedAt   DateTime      @updatedAt
+}
+
+model GroupMember {
+  id        String @id @default(cuid())
+  groupId   String
+  studentId String
+
+  group     Group    @relation(fields: [groupId], references: [id])
+  student   User     @relation(fields: [studentId], references: [id])
+  updatedAt DateTime @updatedAt
+
+  @@unique([groupId, studentId])
+}
+
+model AssessmentWeek {
+  id           String   @id @default(cuid())
+  assessmentId String
+  weekNumber   Int
+  opensAt      DateTime
+  dueAt        DateTime
+  locked       Boolean  @default(false)
+
+  assessment  Assessment   @relation(fields: [assessmentId], references: [id])
+  submissions Submission[]
+  updatedAt   DateTime     @updatedAt
+
+  @@unique([assessmentId, weekNumber])
+}
+
+model Submission {
+  id                   String   @id @default(cuid())
+  assessmentWeekId     String
+  groupId              String
+  submittedByStudentId String
+  submittedAt          DateTime @default(now())
+
+  assessmentWeek AssessmentWeek      @relation(fields: [assessmentWeekId], references: [id])
+  group          Group               @relation(fields: [groupId], references: [id])
+  submittedBy    User                @relation(fields: [submittedByStudentId], references: [id])
+  scores         ContributionScore[]
+  feedback       Feedback[]
+  updatedAt      DateTime            @updatedAt
+
+  @@unique([assessmentWeekId, groupId, submittedByStudentId])
+}
+
+model ContributionScore {
+  id              String @id @default(cuid())
+  submissionId    String
+  targetStudentId String
+  points          Int
+
+  submission    Submission @relation(fields: [submissionId], references: [id])
+  targetStudent User       @relation(fields: [targetStudentId], references: [id])
+  updatedAt     DateTime   @updatedAt
+
+  @@unique([submissionId, targetStudentId])
+}
+
+model Feedback {
+  id            String @id @default(cuid())
+  submissionId  String
+  fromStudentId String
+  toStudentId   String
+  comment       String
+
+  submission  Submission @relation(fields: [submissionId], references: [id])
+  fromStudent User       @relation("FeedbackFrom", fields: [fromStudentId], references: [id])
+  toStudent   User       @relation("FeedbackTo", fields: [toStudentId], references: [id])
+  updatedAt   DateTime   @updatedAt
+
+  @@unique([submissionId, fromStudentId, toStudentId])
+}
+
+enum Role {
+  ADMIN
+  EDUCATOR
+  STUDENT
 }
