@@ -32,6 +32,15 @@ const weeks: Week[] = [
   { number: 2, label: "Week 2", due: "Sun 30 Jun, 11:55 PM", locked: false, submitted: false },
   { number: 3, label: "Week 3", due: "Sun 7 Jul, 11:55 PM", locked: true, submitted: true },
   { number: 4, label: "Week 4", due: "Sun 14 Jul, 11:55 PM", locked: true, submitted: false },
+  { number: 5, label: "Week 5", due: "Sun 21 Jul, 11:55 PM", locked: false, submitted: false },
+  { number: 6, label: "Week 6", due: "Sun 28 Jul, 11:55 PM", locked: false, submitted: false },
+  { number: 7, label: "Week 7", due: "Sun 4 Aug, 11:55 PM", locked: false, submitted: false },
+  { number: 8, label: "Week 8", due: "Sun 11 Aug, 11:55 PM", locked: false, submitted: false },
+  { number: 9, label: "Week 9", due: "Sun 18 Aug, 11:55 PM", locked: false, submitted: false },
+  { number: 10, label: "Week 10", due: "Sun 25 Aug, 11:55 PM", locked: false, submitted: false },
+  { number: 11, label: "Week 11", due: "Sun 1 Sep, 11:55 PM", locked: false, submitted: false },
+  { number: 12, label: "Week 12", due: "Sun 8 Sep, 11:55 PM", locked: false, submitted: false },
+  { number: 13, label: "Week 13", due: "Sun 15 Sep, 11:55 PM", locked: false, submitted: false },
 ];
 
 const colours = ["#31536a", "#59798e", "#88a0ae", "#b5c3cb", "#d4dee4", "#e6ecef"];
