@@ -1,5 +1,5 @@
-import StudentAssessmentPage from "@/components/StudentAssessmentPage";
+import { redirect } from "next/navigation";
 
 export default function Home() {
-  return <StudentAssessmentPage />;
+  redirect("/admin");
 }
