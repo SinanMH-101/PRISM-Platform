@@ -1,13 +1,15 @@
 import Link from "next/link";
-import { assessments, formatSchedule } from "@/components/admin/data";
+import { formatSchedule, getAssessments } from "@/components/admin/data";
 
 const statusStyles = {
-  draft: "bg-amber-50 text-amber-700 border-amber-200",
-  active: "bg-emerald-50 text-emerald-700 border-emerald-200",
-  closed: "bg-slate-100 text-slate-700 border-slate-200",
+  DRAFT: "bg-amber-50 text-amber-700 border-amber-200",
+  ACTIVE: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  CLOSED: "bg-slate-100 text-slate-700 border-slate-200",
 };
 
-export default function AdminDashboardPage() {
+export default async function AdminDashboardPage() {
+  const assessments = await getAssessments();
+
   return (
     <div className="space-y-6">
       <section className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
@@ -26,6 +28,12 @@ export default function AdminDashboardPage() {
       </label>
 
       <section className="grid gap-4 lg:grid-cols-2">
+        {assessments.length === 0 && (
+          <div className="rounded-lg border border-brand-border bg-brand-surface p-8 text-center shadow-soft">
+            <p className="font-semibold">No assessments yet.</p>
+            <p className="mt-1 text-sm text-brand-muted">Create the first assessment to start using database-backed admin data.</p>
+          </div>
+        )}
         {assessments.map((assessment) => (
           <article key={assessment.id} className="rounded-lg border border-brand-border bg-brand-surface p-5 shadow-soft">
             <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
@@ -34,7 +42,7 @@ export default function AdminDashboardPage() {
                 <h2 className="mt-1 text-2xl font-bold">{assessment.name}</h2>
               </div>
               <span className={`w-fit rounded-full border px-3 py-1 text-xs font-bold capitalize ${statusStyles[assessment.status]}`}>
-                {assessment.status}
+                {assessment.status.toLowerCase()}
               </span>
             </div>
 

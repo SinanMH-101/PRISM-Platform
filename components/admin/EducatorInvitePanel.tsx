@@ -1,143 +1,152 @@
 "use client";
 
-import { ChangeEvent, FormEvent, useState } from "react";
-import { Educator } from "./data";
+import { useActionState, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import {
+  createEducatorAccountAction,
+  invitePastedEducatorsAction,
+  removeEducatorAction,
+  resendEducatorInviteAction,
+  type EducatorInviteActionState,
+  uploadEducatorCsvAction,
+} from "@/app/admin/actions";
+import type { InviteEmailPreview } from "@/lib/invites";
 
-function splitEmails(input: string) {
-  return Array.from(new Set(input.split(/[\s,;]+/).map((email) => email.trim().toLowerCase()).filter((email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))));
-}
+type EducatorRow = {
+  id: string;
+  name: string | null;
+  email: string;
+  status: string;
+  invitedAt: string;
+  lastSentAt: string | null;
+};
 
-function nameFromEmail(email: string) {
-  return email
-    .split("@")[0]
-    .split(/[._-]+/)
-    .filter(Boolean)
-    .map((part) => part[0]?.toUpperCase() + part.slice(1))
-    .join(" ");
-}
+const emptyState: EducatorInviteActionState = { previews: [] };
 
-export default function EducatorInvitePanel({ initialEducators }: { initialEducators: Educator[] }) {
-  const [educators, setEducators] = useState(initialEducators);
-  const [pastedEmails, setPastedEmails] = useState("");
-  const [manual, setManual] = useState({ name: "", email: "", password: "" });
+export default function EducatorInvitePanel({ assessmentId, educators }: { assessmentId: string; educators: EducatorRow[] }) {
+  const router = useRouter();
+  const [pastedState, pastedAction, pastedPending] = useActionState(invitePastedEducatorsAction, emptyState);
+  const [csvState, csvAction, csvPending] = useActionState(uploadEducatorCsvAction, emptyState);
+  const [manualState, manualAction, manualPending] = useActionState(createEducatorAccountAction, emptyState);
+  const [resendState, resendAction, resendPending] = useActionState(resendEducatorInviteAction, emptyState);
+  const [previews, setPreviews] = useState<InviteEmailPreview[]>([]);
 
-  function addEmails(emails: string[]) {
-    if (emails.length === 0) return;
-    const known = new Set(educators.map((educator) => educator.email));
-    const additions = emails
-      .filter((email) => !known.has(email))
-      .map((email) => ({
-        id: `local-${email}`,
-        assessmentId: "local",
-        name: nameFromEmail(email),
-        email,
-        status: "invited" as const,
-        inviteSentDate: new Date().toISOString().slice(0, 10),
-      }));
-    setEducators((current) => [...current, ...additions]);
-  }
+  useEffect(() => {
+    const latest = [pastedState, csvState, manualState, resendState].find((state) => state.previews.length > 0);
+    if (latest) setPreviews(latest.previews);
+  }, [pastedState, csvState, manualState, resendState]);
 
-  function invitePasted() {
-    addEmails(splitEmails(pastedEmails));
-    setPastedEmails("");
-  }
+  useEffect(() => {
+    const interval = window.setInterval(() => {
+      if (document.visibilityState === "visible") {
+        router.refresh();
+      }
+    }, 3000);
 
-  function uploadCsv(event: ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    file.text().then((text) => addEmails(splitEmails(text)));
-    event.target.value = "";
-  }
+    return () => window.clearInterval(interval);
+  }, [router]);
 
-  function createManualAccount(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const email = manual.email.trim().toLowerCase();
-    const name = manual.name.trim();
-    if (!name || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return;
-    setEducators((current) => [
-      { id: `manual-${email}`, assessmentId: "local", name, email, status: "invited", inviteSentDate: new Date().toISOString().slice(0, 10) },
-      ...current.filter((educator) => educator.email !== email),
-    ]);
-    setManual({ name: "", email: "", password: "" });
-  }
-
-  function removeEducator(email: string) {
-    setEducators((current) => current.filter((educator) => educator.email !== email));
-  }
+  const error = pastedState.error ?? csvState.error ?? manualState.error ?? resendState.error;
 
   return (
     <div className="space-y-6">
+      {previews.length > 0 && <EmailPreviewModal previews={previews} onClose={() => setPreviews([])} />}
+
       <section className="rounded-lg border border-brand-border bg-brand-surface p-5 shadow-soft">
         <h2 className="text-xl font-bold">Add educators</h2>
-        <div className="mt-5 grid gap-4">
+        {error && <p className="mt-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-semibold text-red-700">{error}</p>}
+
+        <form action={pastedAction} className="mt-5 grid gap-4">
+          <input type="hidden" name="assessmentId" value={assessmentId} />
           <label className="text-sm font-semibold">
             Paste email addresses
             <textarea
-              value={pastedEmails}
-              onChange={(event) => setPastedEmails(event.target.value)}
+              name="emails"
               placeholder="alex.smith@university.edu, priya.rao@university.edu"
               className="focus-ring mt-2 min-h-24 w-full resize-y rounded-lg border border-brand-border px-3 py-2 font-normal"
             />
           </label>
-          <div className="flex flex-wrap gap-3">
-            <button type="button" onClick={invitePasted} className="focus-ring rounded-lg bg-brand-primary px-4 py-2 text-sm font-semibold text-white hover:opacity-90">
-              Send pasted invites
+          <div>
+            <button disabled={pastedPending} className="focus-ring rounded-lg bg-brand-primary px-4 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-60">
+              {pastedPending ? "Preparing previews..." : "Send pasted invites"}
             </button>
-            <label className="focus-ring cursor-pointer rounded-lg border border-brand-border px-4 py-2 text-sm font-semibold hover:bg-brand-background">
-              Upload CSV
-              <input type="file" accept=".csv,text/csv" onChange={uploadCsv} className="sr-only" />
-            </label>
           </div>
-        </div>
+        </form>
 
-        <form onSubmit={createManualAccount} className="mt-6 grid gap-4 border-t border-brand-border pt-5 md:grid-cols-[1fr_1fr_1fr_auto] md:items-end">
-          <TextInput label="Name" value={manual.name} onChange={(value) => setManual((current) => ({ ...current, name: value }))} />
-          <TextInput label="Email" value={manual.email} onChange={(value) => setManual((current) => ({ ...current, email: value }))} />
-          <TextInput label="Optional generated/static password" value={manual.password} onChange={(value) => setManual((current) => ({ ...current, password: value }))} />
-          <button className="focus-ring rounded-lg border border-brand-border px-4 py-2 text-sm font-semibold hover:bg-brand-background">
-            Create account
+        <form action={csvAction} className="mt-5 flex flex-col gap-3 rounded-lg border border-brand-border p-4 sm:flex-row sm:items-end">
+          <input type="hidden" name="assessmentId" value={assessmentId} />
+          <label className="grow text-sm font-semibold">
+            Upload CSV
+            <input name="csv" type="file" accept=".csv,text/csv" className="focus-ring mt-2 w-full rounded-lg border border-brand-border px-3 py-2 font-normal" />
+          </label>
+          <button disabled={csvPending} className="focus-ring rounded-lg border border-brand-border px-4 py-2 text-sm font-semibold hover:bg-brand-background disabled:opacity-60">
+            {csvPending ? "Importing..." : "Import CSV"}
           </button>
+        </form>
+
+        <form action={manualAction} className="mt-6 grid gap-4 border-t border-brand-border pt-5">
+          <input type="hidden" name="assessmentId" value={assessmentId} />
+          <TextInput label="Name" name="name" />
+          <TextInput label="Email" name="email" />
+          <TextInput label="Optional generated/static password" name="password" />
+          <div>
+            <button disabled={manualPending} className="focus-ring rounded-lg border border-brand-border px-4 py-2 text-sm font-semibold hover:bg-brand-background disabled:opacity-60">
+              {manualPending ? "Creating..." : "Create account"}
+            </button>
+          </div>
         </form>
       </section>
 
       <section className="overflow-hidden rounded-lg border border-brand-border bg-brand-surface shadow-soft">
         <div className="border-b border-brand-border p-5">
           <h2 className="text-xl font-bold">Educator invite status</h2>
-          <p className="mt-1 text-sm text-brand-muted">Invite links bring educators to the login page. Email delivery is mocked in this prototype.</p>
+          <p className="mt-1 text-sm text-brand-muted">Email delivery is currently shown as a local preview popup.</p>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[760px] border-collapse text-left text-sm">
+          <table className="w-full min-w-[860px] border-collapse text-left text-sm">
             <thead className="bg-brand-background text-brand-muted">
               <tr>
                 <th className="px-4 py-3 font-semibold">Educator name</th>
                 <th className="px-4 py-3 font-semibold">Email</th>
                 <th className="px-4 py-3 font-semibold">Status</th>
                 <th className="px-4 py-3 font-semibold">Invite sent date</th>
+                <th className="px-4 py-3 font-semibold">Last preview</th>
                 <th className="px-4 py-3 font-semibold">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-brand-border">
               {educators.map((educator) => (
-                <tr key={educator.email} className="bg-white">
-                  <td className="px-4 py-4 font-semibold">{educator.name}</td>
+                <tr key={educator.id} className="bg-white">
+                  <td className="px-4 py-4 font-semibold">{educator.name ?? "Not provided"}</td>
                   <td className="px-4 py-4 text-brand-muted">{educator.email}</td>
                   <td className="px-4 py-4">
-                    <span className="rounded-full bg-brand-background px-2 py-1 text-xs font-bold capitalize text-brand-muted">{educator.status}</span>
+                    <span className={`rounded-full border px-2 py-1 text-xs font-bold capitalize ${statusBadgeClass(educator.status)}`}>
+                      {educator.status.toLowerCase()}
+                    </span>
                   </td>
-                  <td className="px-4 py-4 text-brand-muted">{educator.inviteSentDate}</td>
+                  <td className="px-4 py-4 text-brand-muted">{educator.invitedAt}</td>
+                  <td className="px-4 py-4 text-brand-muted">{educator.lastSentAt ?? "Not sent"}</td>
                   <td className="px-4 py-4">
                     <div className="flex gap-2">
-                      <button className="focus-ring rounded-lg border border-brand-border px-3 py-2 font-semibold hover:bg-brand-background">Resend invite</button>
-                      <button onClick={() => removeEducator(educator.email)} className="focus-ring rounded-lg border border-brand-border px-3 py-2 font-semibold hover:bg-brand-background">
-                        Remove
-                      </button>
+                      <form action={resendAction}>
+                        <input type="hidden" name="assessmentId" value={assessmentId} />
+                        <input type="hidden" name="id" value={educator.id} />
+                        <button disabled={resendPending} className="focus-ring rounded-lg border border-brand-border px-3 py-2 font-semibold hover:bg-brand-background disabled:opacity-60">
+                          Resend invite
+                        </button>
+                      </form>
+                      <form action={removeEducatorAction}>
+                        <input type="hidden" name="assessmentId" value={assessmentId} />
+                        <input type="hidden" name="id" value={educator.id} />
+                        <button className="focus-ring rounded-lg border border-brand-border px-3 py-2 font-semibold hover:bg-brand-background">Remove</button>
+                      </form>
                     </div>
                   </td>
                 </tr>
               ))}
               {educators.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="px-4 py-8 text-center text-brand-muted">
+                  <td colSpan={6} className="px-4 py-8 text-center text-brand-muted">
                     No educators added yet.
                   </td>
                 </tr>
@@ -150,11 +159,63 @@ export default function EducatorInvitePanel({ initialEducators }: { initialEduca
   );
 }
 
-function TextInput({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
+function statusBadgeClass(status: string) {
+  switch (status) {
+    case "JOINED":
+      return "border-emerald-200 bg-emerald-50 text-emerald-700";
+    case "INVITED":
+      return "border-amber-200 bg-amber-50 text-amber-700";
+    case "REMOVED":
+      return "border-slate-200 bg-slate-100 text-slate-600";
+    default:
+      return "border-brand-border bg-brand-background text-brand-muted";
+  }
+}
+
+function EmailPreviewModal({ previews, onClose }: { previews: InviteEmailPreview[]; onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 px-4 py-8">
+      <section className="max-h-full w-full max-w-2xl overflow-y-auto rounded-lg bg-white shadow-soft">
+        <div className="flex items-start justify-between gap-4 border-b border-brand-border p-5">
+          <div>
+            <h2 className="text-xl font-bold">Email preview</h2>
+            <p className="mt-1 text-sm text-brand-muted">Use these details to open another tab and sign in as the educator.</p>
+          </div>
+          <button onClick={onClose} className="focus-ring rounded-lg border border-brand-border px-3 py-2 text-sm font-semibold hover:bg-brand-background">
+            Close
+          </button>
+        </div>
+        <div className="space-y-4 p-5">
+          {previews.map((preview) => (
+            <article key={`${preview.to}-${preview.subject}`} className="rounded-lg border border-brand-border bg-brand-background p-4">
+              <p className="text-xs font-semibold uppercase text-brand-muted">To</p>
+              <p className="mt-1 font-semibold">{preview.to}</p>
+              <p className="mt-3 text-xs font-semibold uppercase text-brand-muted">Subject</p>
+              <p className="mt-1 font-semibold">{preview.subject}</p>
+              <pre className="mt-4 whitespace-pre-wrap rounded-lg bg-white p-3 text-sm text-brand-text">{preview.body}</pre>
+              <div className="mt-3 rounded-lg bg-white p-3 text-sm">
+                <p>
+                  <span className="font-semibold">Username:</span> {preview.username}
+                </p>
+                {preview.temporaryPassword && (
+                  <p className="mt-1">
+                    <span className="font-semibold">Temporary password:</span> {preview.temporaryPassword}
+                  </p>
+                )}
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function TextInput({ label, name }: { label: string; name: string }) {
   return (
     <label className="text-sm font-semibold">
       {label}
-      <input value={value} onChange={(event) => onChange(event.target.value)} className="focus-ring mt-2 w-full rounded-lg border border-brand-border px-3 py-2 font-normal" />
+      <input name={name} className="focus-ring mt-2 h-11 w-full rounded-lg border border-brand-border px-3 font-normal" />
     </label>
   );
 }

@@ -1,71 +1,74 @@
-"use client";
+import { saveSettingsAction } from "@/app/admin/actions";
 
-import { ChangeEvent, useState } from "react";
+type SettingsValues = {
+  name?: string | null;
+  logoUrl?: string | null;
+  primaryColour: string;
+  secondaryColour: string;
+  accentColour: string;
+};
 
-export default function SettingsForm() {
-  const [logoName, setLogoName] = useState("No logo selected");
-  const [logoPreview, setLogoPreview] = useState<string | null>(null);
-  const [theme, setTheme] = useState({ primary: "#31536a", secondary: "#59798e", accent: "#0f766e" });
+const defaultSettings: SettingsValues = {
+  name: "",
+  logoUrl: "",
+  primaryColour: "#31536a",
+  secondaryColour: "#59798e",
+  accentColour: "#0f766e",
+};
 
-  function uploadLogo(event: ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    setLogoName(file.name);
-    setLogoPreview(URL.createObjectURL(file));
-  }
+export default function SettingsForm({ settings }: { settings?: SettingsValues | null }) {
+  const values = settings ?? defaultSettings;
 
   return (
-    <section className="rounded-lg border border-brand-border bg-brand-surface p-5 shadow-soft">
+    <form action={saveSettingsAction} className="rounded-lg border border-brand-border bg-brand-surface p-5 shadow-soft">
       <div className="grid gap-6 lg:grid-cols-[280px_1fr]">
         <div>
-          <h2 className="text-xl font-bold">University logo</h2>
+          <h2 className="text-xl font-bold">University details</h2>
           <div className="mt-4 flex h-28 w-28 items-center justify-center overflow-hidden rounded-lg border border-brand-border bg-white">
-            {logoPreview ? (
+            {values.logoUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={logoPreview} alt="" className="h-full w-full object-contain" />
+              <img src={values.logoUrl} alt="" className="h-full w-full object-contain" />
             ) : (
               <span className="text-2xl font-bold text-brand-primary">U</span>
             )}
           </div>
-          <label className="mt-4 block cursor-pointer rounded-lg border border-brand-border px-4 py-2 text-center text-sm font-semibold hover:bg-brand-background">
-            Upload/change university logo
-            <input type="file" accept="image/*" onChange={uploadLogo} className="sr-only" />
-          </label>
-          <p className="mt-2 truncate text-xs text-brand-muted">{logoName}</p>
         </div>
 
-        <div>
-          <h2 className="text-xl font-bold">Theme colours</h2>
-          <div className="mt-4 grid gap-4 md:grid-cols-3">
-            {(["primary", "secondary", "accent"] as const).map((key) => (
-              <label key={key} className="text-sm font-semibold capitalize">
-                {key}
-                <input
-                  type="color"
-                  value={theme[key]}
-                  onChange={(event) => setTheme((current) => ({ ...current, [key]: event.target.value }))}
-                  className="mt-2 h-12 w-full cursor-pointer rounded border border-brand-border bg-white"
-                />
-              </label>
-            ))}
+        <div className="space-y-4">
+          <TextInput label="University name" name="name" defaultValue={values.name ?? ""} />
+          <TextInput label="Logo URL" name="logoUrl" defaultValue={values.logoUrl ?? ""} />
+
+          <div className="grid gap-4 md:grid-cols-3">
+            <ColourInput label="Primary colour" name="primaryColour" defaultValue={values.primaryColour} />
+            <ColourInput label="Secondary colour" name="secondaryColour" defaultValue={values.secondaryColour} />
+            <ColourInput label="Accent colour" name="accentColour" defaultValue={values.accentColour} />
           </div>
-          <div className="mt-6 grid gap-3 md:grid-cols-3">
-            <Swatch label="Primary" color={theme.primary} />
-            <Swatch label="Secondary" color={theme.secondary} />
-            <Swatch label="Accent" color={theme.accent} />
+
+          <div className="flex justify-end">
+            <button className="focus-ring rounded-lg bg-brand-primary px-4 py-2 text-sm font-semibold text-white hover:opacity-90">
+              Save settings
+            </button>
           </div>
         </div>
       </div>
-    </section>
+    </form>
   );
 }
 
-function Swatch({ label, color }: { label: string; color: string }) {
+function TextInput({ label, name, defaultValue }: { label: string; name: string; defaultValue: string }) {
   return (
-    <div className="rounded-lg border border-brand-border p-3">
-      <div className="h-12 rounded" style={{ backgroundColor: color }} />
-      <p className="mt-2 text-sm font-semibold">{label}</p>
-      <p className="text-xs text-brand-muted">{color}</p>
-    </div>
+    <label className="block text-sm font-semibold">
+      {label}
+      <input name={name} defaultValue={defaultValue} className="focus-ring mt-2 h-11 w-full rounded-lg border border-brand-border px-3 font-normal" />
+    </label>
+  );
+}
+
+function ColourInput({ label, name, defaultValue }: { label: string; name: string; defaultValue: string }) {
+  return (
+    <label className="block text-sm font-semibold">
+      {label}
+      <input name={name} type="color" defaultValue={defaultValue} className="mt-2 h-11 w-full cursor-pointer rounded border border-brand-border bg-white" />
+    </label>
   );
 }

@@ -3,14 +3,17 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "seed:admin": "node scripts/seed-admin.mjs",
     "lint": "next lint"
   },
   "dependencies": {
+    "@prisma/adapter-pg": "^7.8.0",
     "@prisma/client": "^7.8.0",
     "@types/node": "latest",
     "@types/react": "latest",
     "@types/react-dom": "latest",
     "next": "latest",
+    "pg": "^8.22.0",
     "prisma": "^7.8.0",
     "react": "latest",
     "react-dom": "latest",

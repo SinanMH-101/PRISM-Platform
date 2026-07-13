@@ -3,13 +3,13 @@
 
 // Get a free hosted Postgres database in seconds: `npx create-db`
 generator erd {
-  provider = "prisma-erd-generator"
-  output   = "./ERD.svg"
+  provider                  = "prisma-erd-generator"
+  output                    = "./ERD.svg"
+  includeRelationFromFields = true
 }
 
 generator client {
-  provider = "prisma-client"
-  output   = "../generated/prisma"
+  provider = "prisma-client-js"
 }
 
 datasource db {
@@ -17,29 +17,57 @@ datasource db {
 }
 
 model User {
+  id                 String   @id @default(cuid())
+  username           String?  @unique
+  name               String
+  email              String   @unique
+  passwordHash       String?
+  mustChangePassword Boolean  @default(false)
+  role               Role
+  createdAt          DateTime @default(now())
+
+  groupMemberships    GroupMember[]
+  sessions            Session[]
+  submissions         Submission[]
+  feedbackGiven       Feedback[]           @relation("FeedbackFrom")
+  feedbackReceived    Feedback[]           @relation("FeedbackTo")
+  scoresReceived      ContributionScore[]
+  assessmentEducators AssessmentEducator[]
+  updatedAt           DateTime             @updatedAt
+}
+
+model Session {
   id        String   @id @default(cuid())
-  name      String
-  email     String   @unique
-  role      Role
+  tokenHash String   @unique
+  userId    String
+  expiresAt DateTime
   createdAt DateTime @default(now())
 
-  groupMemberships GroupMember[]
-  submissions      Submission[]
-  feedbackGiven    Feedback[]          @relation("FeedbackFrom")
-  feedbackReceived Feedback[]          @relation("FeedbackTo")
-  scoresReceived   ContributionScore[]
-  updatedAt        DateTime            @updatedAt
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Assessment {
-  id        String   @id @default(cuid())
-  name      String
-  unitCode  String
-  createdAt DateTime @default(now())
+  id                  String             @id @default(cuid())
+  name                String
+  unitCode            String
+  createdAt           DateTime           @default(now())
+  assessmentWeighting Decimal            @default(0) @db.Decimal(5, 2)
+  processWeighting    Decimal            @default(0) @db.Decimal(5, 2)
+  cohortSize          Int                @default(0)
+  studentsPerGroup    Int                @default(1)
+  educatorCount       Int                @default(0)
+  repeatType          RepeatType         @default(WEEKLY)
+  deadlineDay         DeadlineDay        @default(SUNDAY)
+  deadlineTime        String             @default("23:55")
+  numberOfWeeks       Int                @default(13)
+  startDate           DateTime           @default(now())
+  feedbackVisibility  FeedbackVisibility @default(AFTER_DEADLINE)
+  status              AssessmentStatus   @default(DRAFT)
 
   weeks     AssessmentWeek[]
   classes   Class[]
-  updatedAt DateTime         @updatedAt
+  educators AssessmentEducator[]
+  updatedAt DateTime             @updatedAt
 }
 
 model Class {
@@ -135,8 +163,91 @@ model Feedback {
   @@unique([submissionId, fromStudentId, toStudentId])
 }
 
+model AssessmentEducator {
+  id              String       @id @default(cuid())
+  assessmentId    String
+  userId          String?
+  name            String?
+  email           String
+  status          InviteStatus @default(INVITED)
+  inviteToken     String?
+  inviteTokenHash String?
+  inviteExpiresAt DateTime?
+  invitedAt       DateTime     @default(now())
+  lastSentAt      DateTime?
+  joinedAt        DateTime?
+  removedAt       DateTime?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  assessment Assessment @relation(fields: [assessmentId], references: [id])
+  user       User?      @relation(fields: [userId], references: [id])
+
+  @@unique([assessmentId, email])
+}
+
+model UniversitySettings {
+  id              String   @id @default(cuid())
+  name            String?
+  logoUrl         String?
+  primaryColour   String   @default("#31536a")
+  secondaryColour String   @default("#59798e")
+  accentColour    String   @default("#0f766e")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model EmailLog {
+  id        String      @id @default(cuid())
+  to        String
+  subject   String
+  template  String
+  status    EmailStatus @default(QUEUED)
+  error     String?
+  sentAt    DateTime?
+  createdAt DateTime    @default(now())
+}
+
 enum Role {
   ADMIN
   EDUCATOR
   STUDENT
+}
+
+enum AssessmentStatus {
+  DRAFT
+  ACTIVE
+  CLOSED
+}
+
+enum RepeatType {
+  WEEKLY
+  FORTNIGHTLY
+}
+
+enum FeedbackVisibility {
+  IMMEDIATE_AFTER_SUBMISSION
+  AFTER_DEADLINE
+}
+
+enum InviteStatus {
+  INVITED
+  JOINED
+  REMOVED
+}
+
+enum EmailStatus {
+  QUEUED
+  SENT
+  FAILED
+}
+
+enum DeadlineDay {
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURDAY
+  SUNDAY
 }

@@ -1,6 +1,7 @@
 import Link from "next/link";
+import { logoutAction } from "@/app/admin/actions";
 
-export default function AdminShell({ children }: Readonly<{ children: React.ReactNode }>) {
+export default function AdminShell({ children, userName }: Readonly<{ children: React.ReactNode; userName: string }>) {
   return (
     <main className="min-h-screen bg-brand-background text-brand-text">
       <nav className="border-b border-brand-border bg-brand-surface/95 backdrop-blur">
@@ -13,6 +14,7 @@ export default function AdminShell({ children }: Readonly<{ children: React.Reac
             </div>
           </Link>
           <div className="flex flex-wrap gap-2 text-sm">
+            <span className="rounded-lg border border-brand-border px-3 py-2 text-brand-muted">Signed in as {userName}</span>
             <Link href="/admin" className="focus-ring rounded-lg border border-brand-border px-3 py-2 font-semibold hover:bg-brand-background">
               Dashboard
             </Link>
@@ -22,6 +24,9 @@ export default function AdminShell({ children }: Readonly<{ children: React.Reac
             <Link href="/admin/settings" className="focus-ring rounded-lg border border-brand-border px-3 py-2 font-semibold hover:bg-brand-background">
               Settings
             </Link>
+            <form action={logoutAction}>
+              <button className="focus-ring rounded-lg border border-brand-border px-3 py-2 font-semibold hover:bg-brand-background">Log out</button>
+            </form>
           </div>
         </div>
       </nav>

@@ -1,19 +1,9 @@
-"use client";
-
-import { FormEvent } from "react";
-import { useRouter } from "next/navigation";
+import { createAssessmentAction } from "@/app/admin/actions";
 import { deadlineDays } from "./data";
 
 export default function NewAssessmentForm() {
-  const router = useRouter();
-
-  function submitAssessment(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    router.push("/admin/assessments/draft-new/educators");
-  }
-
   return (
-    <form onSubmit={submitAssessment} className="mx-auto max-w-3xl overflow-hidden rounded-lg border border-brand-border bg-brand-surface shadow-soft">
+    <form action={createAssessmentAction} className="mx-auto max-w-3xl overflow-hidden rounded-lg border border-brand-border bg-brand-surface shadow-soft">
       <FormSection title="Assessment details">
         <TextField label="Assessment name" name="name" placeholder="Assessment 1 Peer Review" />
         <TextField label="Unit code" name="unitCode" placeholder="COMP3000" />
@@ -43,13 +33,15 @@ export default function NewAssessmentForm() {
       </FormSection>
 
       <FormSection title="Deadline schedule">
-        <SelectField label="Repeat type" name="repeatType" defaultValue="weekly">
-          <option value="weekly">Weekly</option>
-          <option value="fortnightly">Fortnightly</option>
+        <SelectField label="Repeat type" name="repeatType" defaultValue="WEEKLY">
+          <option value="WEEKLY">Weekly</option>
+          <option value="FORTNIGHTLY">Fortnightly</option>
         </SelectField>
-        <SelectField label="Deadline day" name="deadlineDay" defaultValue="Sunday">
+        <SelectField label="Deadline day" name="deadlineDay" defaultValue="SUNDAY">
           {deadlineDays.map((day) => (
-            <option key={day}>{day}</option>
+            <option key={day} value={day.toUpperCase()}>
+              {day}
+            </option>
           ))}
         </SelectField>
         <TextField label="Deadline time" name="deadlineTime" type="time" defaultValue="23:55" />
@@ -62,12 +54,12 @@ export default function NewAssessmentForm() {
         <div className="mt-4 space-y-3">
           <RadioOption
             name="feedbackVisibility"
-            value="immediate"
+            value="IMMEDIATE_AFTER_SUBMISSION"
             label="Students can see peer feedback immediately after submitting"
           />
           <RadioOption
             name="feedbackVisibility"
-            value="after-deadline"
+            value="AFTER_DEADLINE"
             label="Students can see peer feedback only after the weekly deadline"
             defaultChecked
           />

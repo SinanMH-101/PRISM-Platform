@@ -5,8 +5,17 @@ import { getAssessment, getAssessmentEducators } from "@/components/admin/data";
 
 export default async function AssessmentEducatorsPage({ params }: { params: Promise<{ assessmentId: string }> }) {
   const { assessmentId } = await params;
-  const assessment = getAssessment(assessmentId);
+  const assessment = await getAssessment(assessmentId);
   if (!assessment) notFound();
+  const educators = await getAssessmentEducators(assessment.id);
+  const educatorRows = educators.map((educator) => ({
+    id: educator.id,
+    name: educator.name,
+    email: educator.email,
+    status: educator.status,
+    invitedAt: educator.invitedAt.toLocaleDateString("en-AU", { day: "2-digit", month: "short", year: "numeric" }),
+    lastSentAt: educator.lastSentAt?.toLocaleDateString("en-AU", { day: "2-digit", month: "short", year: "numeric" }) ?? null,
+  }));
 
   return (
     <div className="space-y-6">
@@ -20,7 +29,7 @@ export default async function AssessmentEducatorsPage({ params }: { params: Prom
           Add educators by pasted emails, CSV upload, or manually-created accounts, then track invitation status.
         </p>
       </div>
-      <EducatorInvitePanel initialEducators={getAssessmentEducators(assessment.id)} />
+      <EducatorInvitePanel assessmentId={assessment.id} educators={educatorRows} />
     </div>
   );
 }

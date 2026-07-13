@@ -1,10 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { formatSchedule, getAssessment, processOverallWeight } from "@/components/admin/data";
+import { formatDate, formatSchedule, getAssessment, processOverallWeight } from "@/components/admin/data";
 
 export default async function AssessmentDetailPage({ params }: { params: Promise<{ assessmentId: string }> }) {
   const { assessmentId } = await params;
-  const assessment = getAssessment(assessmentId);
+  const assessment = await getAssessment(assessmentId);
   if (!assessment) notFound();
 
   const groups = Math.ceil(assessment.cohortSize / assessment.studentsPerGroup);
@@ -39,11 +39,11 @@ export default async function AssessmentDetailPage({ params }: { params: Promise
           <Detail label="Students per group" value={assessment.studentsPerGroup.toString()} />
           <Detail label="Number of educators" value={assessment.educatorCount.toString()} />
           <Detail label="Deadline schedule" value={formatSchedule(assessment)} />
-          <Detail label="Weeks and start date" value={`${assessment.weeks} weeks from ${assessment.startDate}`} />
+          <Detail label="Weeks and start date" value={`${assessment.numberOfWeeks} weeks from ${formatDate(assessment.startDate)}`} />
           <Detail
             label="Feedback visibility"
             value={
-              assessment.feedbackVisibility === "immediate"
+              assessment.feedbackVisibility === "IMMEDIATE_AFTER_SUBMISSION"
                 ? "Students see peer feedback immediately after submitting"
                 : "Students see peer feedback only after the weekly deadline"
             }
@@ -59,7 +59,7 @@ function Stat({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-lg border border-brand-border bg-brand-surface p-4 shadow-soft">
       <p className="text-xs font-semibold uppercase text-brand-muted">{label}</p>
-      <p className="mt-2 text-2xl font-bold capitalize">{value}</p>
+      <p className="mt-2 text-2xl font-bold capitalize">{value.toLowerCase()}</p>
     </div>
   );
 }
