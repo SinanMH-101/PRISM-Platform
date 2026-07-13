@@ -44,6 +44,15 @@ export default function SettingsForm({ settings }: { settings?: SettingsValues |
             <ColourInput label="Accent colour" name="accentColour" defaultValue={values.accentColour} />
           </div>
 
+          <div className="rounded-lg border border-brand-border p-4">
+            <p className="text-sm font-semibold">Current saved theme</p>
+            <div className="mt-3 grid gap-3 md:grid-cols-3">
+              <Swatch label="Primary" colour={values.primaryColour} />
+              <Swatch label="Secondary" colour={values.secondaryColour} />
+              <Swatch label="Accent" colour={values.accentColour} />
+            </div>
+          </div>
+
           <div className="flex justify-end">
             <button className="focus-ring rounded-lg bg-brand-primary px-4 py-2 text-sm font-semibold text-white hover:opacity-90">
               Save settings
@@ -70,5 +79,16 @@ function ColourInput({ label, name, defaultValue }: { label: string; name: strin
       {label}
       <input name={name} type="color" defaultValue={defaultValue} className="mt-2 h-11 w-full cursor-pointer rounded border border-brand-border bg-white" />
     </label>
+  );
+}
+
+function Swatch({ label, colour }: { label: string; colour: string }) {
+  return (
+    <div>
+      <div className="h-10 rounded-lg border border-brand-border" style={{ backgroundColor: colour }} />
+      <p className="mt-2 text-xs font-semibold text-brand-muted">
+        {label}: {colour}
+      </p>
+    </div>
   );
 }

@@ -10,6 +10,7 @@
   --color-text: #172033;
   --color-muted: #667085;
   --color-border: #d9dee7;
+  --color-accent: #0f766e;
 }
 
 * { box-sizing: border-box; }

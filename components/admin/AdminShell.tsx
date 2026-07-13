@@ -1,15 +1,43 @@
 import Link from "next/link";
+import type { CSSProperties } from "react";
 import { logoutAction } from "@/app/admin/actions";
 
-export default function AdminShell({ children, userName }: Readonly<{ children: React.ReactNode; userName: string }>) {
+type AdminShellSettings = {
+  name?: string | null;
+  logoUrl?: string | null;
+  primaryColour: string;
+  secondaryColour: string;
+  accentColour: string;
+};
+
+export default function AdminShell({
+  children,
+  userName,
+  settings,
+}: Readonly<{ children: React.ReactNode; userName: string; settings: AdminShellSettings }>) {
+  const appName = settings.name?.trim() || "University Team Assessment";
+  const themeStyle = {
+    "--color-primary": settings.primaryColour,
+    "--color-secondary": settings.secondaryColour,
+    "--color-muted": settings.secondaryColour,
+    "--color-accent": settings.accentColour,
+  } as CSSProperties;
+
   return (
-    <main className="min-h-screen bg-brand-background text-brand-text">
+    <main className="min-h-screen bg-brand-background text-brand-text" style={themeStyle}>
       <nav className="border-b border-brand-border bg-brand-surface/95 backdrop-blur">
         <div className="mx-auto flex max-w-7xl flex-col gap-4 px-5 py-4 md:flex-row md:items-center md:justify-between">
           <Link href="/admin" className="focus-ring flex items-center gap-3 rounded-lg">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-brand-primary text-sm font-bold text-white">U</div>
+            <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-lg bg-brand-primary text-sm font-bold text-white">
+              {settings.logoUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={settings.logoUrl} alt="" className="h-full w-full object-contain bg-white" />
+              ) : (
+                "U"
+              )}
+            </div>
             <div>
-              <p className="text-sm font-semibold">University Team Assessment</p>
+              <p className="text-sm font-semibold">{appName}</p>
               <p className="text-xs text-brand-muted">Admin workspace</p>
             </div>
           </Link>
