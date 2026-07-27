@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { getCurrentUser } from "@/lib/auth";
+import { getCurrentUser, getRoleHomePath } from "@/lib/auth";
 import LoginForm from "./LoginForm";
 
 export default async function LoginPage() {
@@ -7,7 +7,7 @@ export default async function LoginPage() {
 
   if (user) {
     if (user.mustChangePassword) redirect("/change-password");
-    redirect(user.role === "ADMIN" ? "/admin" : "/educator");
+    redirect(getRoleHomePath(user.role));
   }
 
   return (

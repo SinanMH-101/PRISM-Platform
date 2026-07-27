@@ -1,7 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { getCurrentUser } from "@/lib/auth";
+import { getCurrentUser, getRoleHomePath } from "@/lib/auth";
 import { hashPassword } from "@/lib/password";
 import { prisma } from "@/lib/prisma";
 
@@ -23,5 +23,5 @@ export async function changePasswordAction(_previousState: string | null, formDa
     },
   });
 
-  redirect(user.role === "ADMIN" ? "/admin" : "/educator");
+  redirect(getRoleHomePath(user.role));
 }

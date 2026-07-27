@@ -1,7 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { authenticate, createSession } from "@/lib/auth";
+import { authenticate, createSession, getRoleHomePath } from "@/lib/auth";
 
 export async function loginAction(_previousState: string | null, formData: FormData) {
   const username = String(formData.get("username") ?? "").trim();
@@ -23,5 +23,5 @@ export async function loginAction(_previousState: string | null, formData: FormD
     redirect("/change-password");
   }
 
-  redirect(user.role === "ADMIN" ? "/admin" : "/educator");
+  redirect(getRoleHomePath(user.role));
 }

@@ -39,6 +39,7 @@ export default async function EducatorPage() {
                 <div>
                   <p className="text-sm font-semibold text-brand-primary">{invite.assessment.unitCode}</p>
                   <h2 className="mt-1 text-2xl font-bold">{invite.assessment.name}</h2>
+                  <p className="mt-1 text-sm text-brand-muted">{invite.assessment.semester}</p>
                   <p className="mt-2 text-sm capitalize text-brand-muted">Status: {invite.status.toLowerCase()}</p>
                 </div>
                 {invite.status === "JOINED" ? (

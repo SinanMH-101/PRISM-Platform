@@ -40,6 +40,7 @@ export default async function AdminDashboardPage() {
               <div>
                 <p className="text-sm font-semibold text-brand-primary">{assessment.unitCode}</p>
                 <h2 className="mt-1 text-2xl font-bold">{assessment.name}</h2>
+                <p className="mt-1 text-sm font-semibold text-brand-muted">{assessment.semester}</p>
               </div>
               <span className={`w-fit rounded-full border px-3 py-1 text-xs font-bold capitalize ${statusStyles[assessment.status]}`}>
                 {assessment.status.toLowerCase()}

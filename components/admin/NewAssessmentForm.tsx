@@ -2,11 +2,23 @@ import { createAssessmentAction } from "@/app/admin/actions";
 import { deadlineDays } from "./data";
 
 export default function NewAssessmentForm() {
+  const currentYear = new Date().getFullYear();
+  const semesterYears = Array.from({ length: 7 }, (_, index) => currentYear - 1 + index);
+
   return (
     <form action={createAssessmentAction} className="mx-auto max-w-3xl overflow-hidden rounded-lg border border-brand-border bg-brand-surface shadow-soft">
       <FormSection title="Assessment details">
         <TextField label="Assessment name" name="name" placeholder="Assessment 1 Peer Review" />
         <TextField label="Unit code" name="unitCode" placeholder="COMP3000" />
+        <div className="grid gap-4 sm:grid-cols-2">
+          <SelectField label="Academic year" name="semesterYear" defaultValue={String(currentYear)}>
+            {semesterYears.map((year) => <option key={year} value={year}>{year}</option>)}
+          </SelectField>
+          <SelectField label="Semester" name="semesterPeriod" defaultValue="S2">
+            <option value="S1">Semester 1 (S1)</option>
+            <option value="S2">Semester 2 (S2)</option>
+          </SelectField>
+        </div>
       </FormSection>
 
       <FormSection title="Weighting">

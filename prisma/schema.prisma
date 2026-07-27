@@ -18,6 +18,7 @@ datasource db {
 
 model User {
   id                 String   @id @default(cuid())
+  studentId          String?  @unique
   username           String?  @unique
   name               String
   email              String   @unique
@@ -33,6 +34,7 @@ model User {
   feedbackReceived    Feedback[]           @relation("FeedbackTo")
   scoresReceived      ContributionScore[]
   assessmentEducators AssessmentEducator[]
+  groupsManaged        Group[]              @relation("GroupEducator")
   updatedAt           DateTime             @updatedAt
 }
 
@@ -50,6 +52,7 @@ model Assessment {
   id                  String             @id @default(cuid())
   name                String
   unitCode            String
+  semester            String             @default("2026 S2")
   createdAt           DateTime           @default(now())
   assessmentWeighting Decimal            @default(0) @db.Decimal(5, 2)
   processWeighting    Decimal            @default(0) @db.Decimal(5, 2)
@@ -81,11 +84,13 @@ model Class {
 }
 
 model Group {
-  id      String @id @default(cuid())
-  name    String
-  classId String
+  id         String  @id @default(cuid())
+  name       String
+  classId    String
+  educatorId String?
 
   class       Class         @relation(fields: [classId], references: [id])
+  educator    User?         @relation("GroupEducator", fields: [educatorId], references: [id], onDelete: SetNull)
   members     GroupMember[]
   submissions Submission[]
   updatedAt   DateTime      @updatedAt

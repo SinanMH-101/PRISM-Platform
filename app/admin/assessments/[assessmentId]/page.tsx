@@ -18,6 +18,7 @@ export default async function AssessmentDetailPage({ params }: { params: Promise
           </Link>
           <p className="mt-3 text-sm font-semibold text-brand-primary">{assessment.unitCode}</p>
           <h1 className="mt-1 text-3xl font-bold">{assessment.name}</h1>
+          <p className="mt-1 text-sm font-semibold text-brand-muted">{assessment.semester}</p>
         </div>
         <Link href={`/admin/assessments/${assessment.id}/educators`} className="focus-ring rounded-lg bg-brand-primary px-4 py-3 text-sm font-semibold text-white hover:opacity-90">
           Manage educators
@@ -35,6 +36,7 @@ export default async function AssessmentDetailPage({ params }: { params: Promise
         <h2 className="text-xl font-bold">Assessment setup</h2>
         <dl className="mt-5 grid gap-3 text-sm md:grid-cols-2">
           <Detail label="Process/team assessment weighting" value={`${assessment.processWeighting}% of this assessment`} />
+          <Detail label="Semester" value={assessment.semester} />
           <Detail label="Cohort size" value={assessment.cohortSize.toString()} />
           <Detail label="Students per group" value={assessment.studentsPerGroup.toString()} />
           <Detail label="Number of educators" value={assessment.educatorCount.toString()} />

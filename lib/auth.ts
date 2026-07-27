@@ -82,6 +82,22 @@ export async function requireEducator() {
   return user;
 }
 
+export async function requireStudent() {
+  const user = await getCurrentUser();
+
+  if (!user || user.role !== "STUDENT") {
+    redirect("/login");
+  }
+
+  return user;
+}
+
+export function getRoleHomePath(role: "ADMIN" | "EDUCATOR" | "STUDENT") {
+  if (role === "ADMIN") return "/admin";
+  if (role === "EDUCATOR") return "/educator";
+  return "/student/dashboard";
+}
+
 export async function authenticate(username: string, password: string) {
   const user = await prisma.user.findFirst({
     where: {

@@ -44,7 +44,9 @@ export async function createAssessmentAction(formData: FormData) {
 
   const name = String(formData.get("name") ?? "").trim();
   const unitCode = String(formData.get("unitCode") ?? "").trim().toUpperCase();
-  if (!name || !unitCode) return;
+  const semesterYear = Number(formData.get("semesterYear"));
+  const semesterPeriod = String(formData.get("semesterPeriod") ?? "").toUpperCase();
+  if (!name || !unitCode || !Number.isInteger(semesterYear) || !["S1", "S2"].includes(semesterPeriod)) return;
 
   const repeatType = enumValue(formData.get("repeatType")) || "WEEKLY";
   const deadlineDay = enumValue(formData.get("deadlineDay")) || "SUNDAY";
@@ -56,6 +58,7 @@ export async function createAssessmentAction(formData: FormData) {
     data: {
       name,
       unitCode,
+      semester: `${semesterYear} ${semesterPeriod}`,
       assessmentWeighting: numberValue(formData.get("assessmentWeighting"), 0),
       processWeighting: numberValue(formData.get("processWeighting"), 0),
       cohortSize: numberValue(formData.get("cohortSize"), 0),
