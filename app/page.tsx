@@ -1,5 +1,9 @@
-import StudentAssessmentPage from "@/components/StudentAssessmentPage";
+import { redirect } from "next/navigation";
+import { getCurrentUser, getRoleHomePath } from "@/lib/auth";
 
-export default function Home() {
-  return <StudentAssessmentPage />;
+export default async function Home() {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+  if (user.mustChangePassword) redirect("/change-password");
+  redirect(getRoleHomePath(user.role));
 }

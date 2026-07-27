@@ -2,12 +2,257 @@
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
 // Get a free hosted Postgres database in seconds: `npx create-db`
+generator erd {
+  provider                  = "prisma-erd-generator"
+  output                    = "./ERD.svg"
+  includeRelationFromFields = true
+}
 
 generator client {
-  provider = "prisma-client"
-  output   = "../generated/prisma"
+  provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "postgresql"
+}
+
+model User {
+  id                 String   @id @default(cuid())
+  studentId          String?  @unique
+  username           String?  @unique
+  name               String
+  email              String   @unique
+  passwordHash       String?
+  mustChangePassword Boolean  @default(false)
+  role               Role
+  createdAt          DateTime @default(now())
+
+  groupMemberships    GroupMember[]
+  sessions            Session[]
+  submissions         Submission[]
+  feedbackGiven       Feedback[]           @relation("FeedbackFrom")
+  feedbackReceived    Feedback[]           @relation("FeedbackTo")
+  scoresReceived      ContributionScore[]
+  assessmentEducators AssessmentEducator[]
+  groupsManaged        Group[]              @relation("GroupEducator")
+  updatedAt           DateTime             @updatedAt
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  tokenHash String   @unique
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Assessment {
+  id                  String             @id @default(cuid())
+  name                String
+  unitCode            String
+  semester            String             @default("2026 S2")
+  createdAt           DateTime           @default(now())
+  assessmentWeighting Decimal            @default(0) @db.Decimal(5, 2)
+  processWeighting    Decimal            @default(0) @db.Decimal(5, 2)
+  cohortSize          Int                @default(0)
+  studentsPerGroup    Int                @default(1)
+  educatorCount       Int                @default(0)
+  repeatType          RepeatType         @default(WEEKLY)
+  deadlineDay         DeadlineDay        @default(SUNDAY)
+  deadlineTime        String             @default("23:55")
+  numberOfWeeks       Int                @default(13)
+  startDate           DateTime           @default(now())
+  feedbackVisibility  FeedbackVisibility @default(AFTER_DEADLINE)
+  status              AssessmentStatus   @default(DRAFT)
+
+  weeks     AssessmentWeek[]
+  classes   Class[]
+  educators AssessmentEducator[]
+  updatedAt DateTime             @updatedAt
+}
+
+model Class {
+  id           String @id @default(cuid())
+  name         String
+  assessmentId String
+
+  assessment Assessment @relation(fields: [assessmentId], references: [id])
+  groups     Group[]
+  updatedAt  DateTime   @updatedAt
+}
+
+model Group {
+  id         String  @id @default(cuid())
+  name       String
+  classId    String
+  educatorId String?
+
+  class       Class         @relation(fields: [classId], references: [id])
+  educator    User?         @relation("GroupEducator", fields: [educatorId], references: [id], onDelete: SetNull)
+  members     GroupMember[]
+  submissions Submission[]
+  updatedAt   DateTime      @updatedAt
+}
+
+model GroupMember {
+  id        String @id @default(cuid())
+  groupId   String
+  studentId String
+
+  group     Group    @relation(fields: [groupId], references: [id])
+  student   User     @relation(fields: [studentId], references: [id])
+  updatedAt DateTime @updatedAt
+
+  @@unique([groupId, studentId])
+}
+
+model AssessmentWeek {
+  id           String   @id @default(cuid())
+  assessmentId String
+  weekNumber   Int
+  opensAt      DateTime
+  dueAt        DateTime
+  locked       Boolean  @default(false)
+
+  assessment  Assessment   @relation(fields: [assessmentId], references: [id])
+  submissions Submission[]
+  updatedAt   DateTime     @updatedAt
+
+  @@unique([assessmentId, weekNumber])
+}
+
+model Submission {
+  id                   String   @id @default(cuid())
+  assessmentWeekId     String
+  groupId              String
+  submittedByStudentId String
+  submittedAt          DateTime @default(now())
+
+  assessmentWeek AssessmentWeek      @relation(fields: [assessmentWeekId], references: [id])
+  group          Group               @relation(fields: [groupId], references: [id])
+  submittedBy    User                @relation(fields: [submittedByStudentId], references: [id])
+  scores         ContributionScore[]
+  feedback       Feedback[]
+  updatedAt      DateTime            @updatedAt
+
+  @@unique([assessmentWeekId, groupId, submittedByStudentId])
+}
+
+model ContributionScore {
+  id              String @id @default(cuid())
+  submissionId    String
+  targetStudentId String
+  points          Int
+
+  submission    Submission @relation(fields: [submissionId], references: [id])
+  targetStudent User       @relation(fields: [targetStudentId], references: [id])
+  updatedAt     DateTime   @updatedAt
+
+  @@unique([submissionId, targetStudentId])
+}
+
+model Feedback {
+  id            String @id @default(cuid())
+  submissionId  String
+  fromStudentId String
+  toStudentId   String
+  comment       String
+
+  submission  Submission @relation(fields: [submissionId], references: [id])
+  fromStudent User       @relation("FeedbackFrom", fields: [fromStudentId], references: [id])
+  toStudent   User       @relation("FeedbackTo", fields: [toStudentId], references: [id])
+  updatedAt   DateTime   @updatedAt
+
+  @@unique([submissionId, fromStudentId, toStudentId])
+}
+
+model AssessmentEducator {
+  id              String       @id @default(cuid())
+  assessmentId    String
+  userId          String?
+  name            String?
+  email           String
+  status          InviteStatus @default(INVITED)
+  inviteToken     String?
+  inviteTokenHash String?
+  inviteExpiresAt DateTime?
+  invitedAt       DateTime     @default(now())
+  lastSentAt      DateTime?
+  joinedAt        DateTime?
+  removedAt       DateTime?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  assessment Assessment @relation(fields: [assessmentId], references: [id])
+  user       User?      @relation(fields: [userId], references: [id])
+
+  @@unique([assessmentId, email])
+}
+
+model UniversitySettings {
+  id              String   @id @default(cuid())
+  name            String?
+  logoUrl         String?
+  primaryColour   String   @default("#31536a")
+  secondaryColour String   @default("#59798e")
+  accentColour    String   @default("#0f766e")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model EmailLog {
+  id        String      @id @default(cuid())
+  to        String
+  subject   String
+  template  String
+  status    EmailStatus @default(QUEUED)
+  error     String?
+  sentAt    DateTime?
+  createdAt DateTime    @default(now())
+}
+
+enum Role {
+  ADMIN
+  EDUCATOR
+  STUDENT
+}
+
+enum AssessmentStatus {
+  DRAFT
+  ACTIVE
+  CLOSED
+}
+
+enum RepeatType {
+  WEEKLY
+  FORTNIGHTLY
+}
+
+enum FeedbackVisibility {
+  IMMEDIATE_AFTER_SUBMISSION
+  AFTER_DEADLINE
+}
+
+enum InviteStatus {
+  INVITED
+  JOINED
+  REMOVED
+}
+
+enum EmailStatus {
+  QUEUED
+  SENT
+  FAILED
+}
+
+enum DeadlineDay {
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURDAY
+  SUNDAY
 }

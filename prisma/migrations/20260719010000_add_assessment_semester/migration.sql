@@ -1,0 +1,1 @@
+ALTER TABLE "Assessment" ADD COLUMN "semester" TEXT NOT NULL DEFAULT '2026 S2';

@@ -58,7 +58,7 @@ function handlesToAllocations(handles: number[]) {
   return points.slice(1).map((point, index) => point - points[index]);
 }
 
-export default function StudentAssessmentPage() {
+export default function StudentAssessmentPage({ currentStudentName }: { currentStudentName: string }) {
   const [selectedWeek, setSelectedWeek] = useState(1);
   const [handles, setHandles] = useState<number[]>(() => buildEvenHandles(groupMembers.length));
   const [feedback, setFeedback] = useState<FeedbackMap>(() =>
@@ -115,7 +115,7 @@ export default function StudentAssessmentPage() {
             </div>
           </div>
           <div className="hidden rounded-full border border-brand-border px-4 py-2 text-sm text-brand-muted sm:block">
-            Logged in as Sinan Haque
+            Logged in as {currentStudentName}
           </div>
         </div>
       </nav>
