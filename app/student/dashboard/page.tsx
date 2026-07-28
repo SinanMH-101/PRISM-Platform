@@ -91,8 +91,8 @@ export default async function StudentDashboardPage() {
                   <p className="text-xs font-semibold uppercase tracking-wide text-brand-muted">Status</p>
                   <p className="mt-1 text-sm font-semibold capitalize">{assessment.status.toLowerCase()}</p>
                 </div>
-                <Link href="/student" className="focus-ring mt-5 rounded-lg bg-brand-primary px-4 py-3 text-center text-sm font-semibold text-white hover:opacity-90">
-                  Open assessment reference
+                <Link href={`/student/assessments/${assessment.id}`} className="focus-ring mt-5 rounded-lg bg-brand-primary px-4 py-3 text-center text-sm font-semibold text-white hover:opacity-90">
+                  Open assessment
                 </Link>
               </article>
             ))}
