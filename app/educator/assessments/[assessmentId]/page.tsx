@@ -3,6 +3,9 @@ import { notFound, redirect } from "next/navigation";
 import { requireEducator } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import GroupManager from "@/components/educator/GroupManager";
+import EducatorProgressDashboard from "@/components/educator/EducatorProgressDashboard";
+import EducatorAssessmentViews from "@/components/educator/EducatorAssessmentViews";
+import GroupSubmissionView from "@/components/educator/GroupSubmissionView";
 
 export default async function EducatorAssessmentPage({ params }: { params: Promise<{ assessmentId: string }> }) {
   const educator = await requireEducator();
@@ -19,13 +22,24 @@ export default async function EducatorAssessmentPage({ params }: { params: Promi
     include: {
       assessment: {
         include: {
+          weeks: { orderBy: { weekNumber: "asc" } },
           classes: {
             include: {
               groups: {
                 include: {
+                  educator: { select: { name: true } },
                   members: {
                     include: { student: true },
                     orderBy: { student: { name: "asc" } },
+                  },
+                  submissions: {
+                    include: {
+                      assessmentWeek: { select: { weekNumber: true } },
+                      submittedBy: { select: { id: true, name: true } },
+                      scores: { include: { targetStudent: { select: { name: true } } } },
+                      feedback: { include: { toStudent: { select: { name: true } } } },
+                    },
+                    orderBy: [{ assessmentWeek: { weekNumber: "desc" } }, { submittedBy: { name: "asc" } }],
                   },
                 },
                 orderBy: { name: "asc" },
@@ -57,8 +71,8 @@ export default async function EducatorAssessmentPage({ params }: { params: Promi
         </div>
       </nav>
 
-      <section className="mx-auto grid max-w-6xl items-start gap-6 px-5 py-7 lg:grid-cols-[320px_minmax(0,1fr)]">
-        <aside className="lg:sticky lg:top-6">
+      <EducatorAssessmentViews
+        sidebar={
           <section className="rounded-lg border border-brand-border bg-brand-surface p-5 shadow-soft">
             <p className="text-sm font-semibold text-brand-primary">{assessment.unitCode}</p>
             <h1 className="mt-1 text-3xl font-bold">{assessment.name}</h1>
@@ -74,12 +88,44 @@ export default async function EducatorAssessmentPage({ params }: { params: Promi
               </div>
             </div>
           </section>
-        </aside>
-
-        <div className="flex min-w-0 justify-center">
+        }
+        dashboard={
+          <EducatorProgressDashboard
+            currentEducatorName={educator.name}
+            weeks={assessment.weeks}
+            groups={groups.map((group) => ({
+              id: group.id,
+              name: group.name,
+              className: group.className,
+              educatorName: group.educator?.name ?? null,
+              members: group.members.map((member) => ({ studentId: member.studentId })),
+              submissions: group.submissions,
+            }))}
+          />
+        }
+        groupManager={
           <GroupManager assessmentId={assessment.id} studentsPerGroup={assessment.studentsPerGroup} groups={groups} />
-        </div>
-      </section>
+        }
+        groupView={
+          <GroupSubmissionView
+            weekNumbers={assessment.weeks.map((week) => week.weekNumber)}
+            groups={groups.map((group) => ({
+              id: group.id,
+              name: group.name,
+              className: group.className,
+              members: group.members.map((member) => ({ id: member.student.id, name: member.student.name })),
+              submissions: group.submissions.map((submission) => ({
+                id: submission.id,
+                weekNumber: submission.assessmentWeek.weekNumber,
+                submittedAt: submission.submittedAt.toISOString(),
+                submittedBy: submission.submittedBy,
+                scores: submission.scores.map((score) => ({ targetStudentId: score.targetStudentId, targetStudentName: score.targetStudent.name, points: score.points })),
+                feedback: submission.feedback.map((item) => ({ toStudentId: item.toStudentId, toStudentName: item.toStudent.name, comment: item.comment })),
+              })),
+            }))}
+          />
+        }
+      />
     </main>
   );
 }
