@@ -16,11 +16,12 @@ type Group = {
   id: string;
   name: string;
   className: string;
+  educatorName?: string | null;
   members: { id: string; name: string }[];
   submissions: Submission[];
 };
 
-export default function GroupSubmissionView({ assessmentId, groups, weekNumbers }: { assessmentId: string; groups: Group[]; weekNumbers: number[] }) {
+export default function GroupSubmissionView({ assessmentId, groups, weekNumbers, readOnly = false }: { assessmentId: string; groups: Group[]; weekNumbers: number[]; readOnly?: boolean }) {
   const [selectedGroupId, setSelectedGroupId] = useState(groups[0]?.id ?? "");
   const [selectedWeekIndex, setSelectedWeekIndex] = useState(0);
   const [editingSubmission, setEditingSubmission] = useState<Submission | null>(null);
@@ -61,6 +62,7 @@ export default function GroupSubmissionView({ assessmentId, groups, weekNumbers 
             return (
               <button key={item.id} type="button" onClick={() => chooseGroup(item.id)} className={`focus-ring w-full rounded-lg px-3 py-3 text-left transition ${isActive ? "bg-brand-primary text-white" : "hover:bg-brand-background"}`}>
                 <span className="block truncate font-semibold">{item.name}</span>
+                <span className={`mt-1 block truncate text-xs font-medium ${isActive ? "text-white/90" : "text-brand-primary"}`}>{item.educatorName ?? "Unassigned educator"}</span>
                 <span className={`mt-1 block text-xs ${isActive ? "text-white/75" : "text-brand-muted"}`}>{item.members.length} {item.members.length === 1 ? "student" : "students"} · {item.submissions.length} submissions</span>
               </button>
             );
@@ -73,7 +75,7 @@ export default function GroupSubmissionView({ assessmentId, groups, weekNumbers 
           <div>
             <p className="text-sm font-semibold text-brand-primary">{group.className}</p>
             <h2 className="mt-1 text-2xl font-bold">{group.name}</h2>
-            <p className="mt-1 text-sm text-brand-muted">Review individual submissions, feedback, and contribution allocations.</p>
+            <p className="mt-1 text-sm font-semibold text-brand-primary">Educator: {group.educatorName ?? "Unassigned"}</p>
             {selectedWeek !== undefined && <p className="mt-2 text-sm font-semibold text-brand-primary">Week {selectedWeek}: {memberSubmissions.length}/{group.members.length} submitted</p>}
           </div>
           {weekNumbers.length > 0 && (
@@ -114,7 +116,7 @@ export default function GroupSubmissionView({ assessmentId, groups, weekNumbers 
                   <div><p className="text-xs font-semibold uppercase tracking-wide text-brand-muted">Submission from</p><div className="mt-1 flex flex-wrap items-center gap-2"><p className="font-bold text-brand-text">{submission.submittedBy.name}</p>{!submissionIsComplete(submission, memberIds) && <span className="rounded-full bg-amber-100 px-2 py-1 text-[11px] font-bold text-amber-700">Incomplete: resubmission required</span>}</div></div>
                   <div className="flex flex-wrap items-center gap-3">
                     <time className="text-xs font-medium text-brand-muted">Submitted {formatDate(submission.submittedAt)}</time>
-                    <button type="button" onClick={() => setEditingSubmission(submission)} className="focus-ring rounded-lg border border-brand-border px-3 py-2 text-xs font-bold text-brand-primary hover:bg-brand-background">Adjust scores</button>
+                    {!readOnly && <button type="button" onClick={() => setEditingSubmission(submission)} className="focus-ring rounded-lg border border-brand-border px-3 py-2 text-xs font-bold text-brand-primary hover:bg-brand-background">Adjust scores</button>}
                   </div>
                 </div>
 
@@ -149,7 +151,7 @@ export default function GroupSubmissionView({ assessmentId, groups, weekNumbers 
         )}
       </section>
 
-      {editingSubmission && (
+      {!readOnly && editingSubmission && (
         <div role="dialog" aria-modal="true" aria-labelledby="override-title" className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onMouseDown={(event) => { if (event.target === event.currentTarget) setEditingSubmission(null); }}>
           <div className="w-full max-w-lg rounded-xl bg-brand-surface p-6 shadow-xl">
             <div className="flex items-start justify-between gap-4">

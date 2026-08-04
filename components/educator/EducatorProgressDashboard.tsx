@@ -91,7 +91,7 @@ export default function EducatorProgressDashboard({
               return (
                 <article key={group.id} className="grid gap-5 px-5 py-5 lg:grid-cols-[minmax(180px,1fr)_minmax(220px,1.4fr)_minmax(260px,1.5fr)] lg:items-center">
                   <div>
-                    <div className="flex flex-wrap items-center gap-2"><h4 className="font-bold">{group.name}</h4>{group.educatorName === currentEducatorName} </div>
+                    <div className="flex flex-wrap items-center gap-2"><h4 className="font-bold">{group.name}</h4></div>
                     <p className="mt-1 text-xs text-brand-muted">{group.className} · {group.members.length} {group.members.length === 1 ? "student" : "students"}</p>
                     {group.educatorName && <p className="mt-1 text-xs text-brand-muted">Educator: {group.educatorName}</p>}
                   </div>

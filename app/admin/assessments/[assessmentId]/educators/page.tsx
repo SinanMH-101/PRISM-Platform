@@ -26,7 +26,7 @@ export default async function AssessmentEducatorsPage({ params }: { params: Prom
         <p className="mt-3 text-sm font-semibold text-brand-primary">{assessment.unitCode}</p>
         <h1 className="mt-1 text-3xl font-bold">Educator allocation</h1>
         <p className="mt-2 max-w-3xl text-sm text-brand-muted">
-          Add educators by pasted emails, CSV upload, or manually-created accounts, then track invitation status.
+          Add educators by pasted email addresses or manually-created accounts, then track invitation status.
         </p>
       </div>
       <EducatorInvitePanel assessmentId={assessment.id} educators={educatorRows} />

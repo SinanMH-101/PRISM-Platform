@@ -129,6 +129,7 @@ export default async function EducatorAssessmentPage({
               id: group.id,
               name: group.name,
               className: group.className,
+              educatorName: group.educator?.name ?? null,
               members: group.members.map((member) => ({ id: member.student.id, name: member.student.name })),
               submissions: group.submissions.map((submission) => ({
                 id: submission.id,

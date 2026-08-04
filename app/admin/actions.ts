@@ -34,6 +34,12 @@ function buildDueDate(startDate: string, deadlineDay: string, deadlineTime: stri
   return date;
 }
 
+function buildOpenDate(startDate: string, deadlineDay: string, deadlineTime: string, index: number, repeatType: string) {
+  return index === 0
+    ? new Date(`${startDate}T00:00:00`)
+    : buildDueDate(startDate, deadlineDay, deadlineTime, index - 1, repeatType);
+}
+
 export async function logoutAction() {
   await clearSession();
   redirect("/login");
@@ -77,7 +83,7 @@ export async function createAssessmentAction(formData: FormData) {
       weeks: {
         create: Array.from({ length: numberOfWeeks }, (_, index) => ({
           weekNumber: index + 1,
-          opensAt: new Date(`${startDateValue}T00:00:00`),
+          opensAt: buildOpenDate(startDateValue, deadlineDay, deadlineTime, index, repeatType),
           dueAt: buildDueDate(startDateValue, deadlineDay, deadlineTime, index, repeatType),
         })),
       },
@@ -86,6 +92,97 @@ export async function createAssessmentAction(formData: FormData) {
 
   revalidatePath("/admin");
   redirect(`/admin/assessments/${assessment.id}/educators`);
+}
+
+export async function updateAssessmentAction(formData: FormData) {
+  await requireAdmin();
+
+  const assessmentId = String(formData.get("assessmentId") ?? "");
+  const name = String(formData.get("name") ?? "").trim();
+  const unitCode = String(formData.get("unitCode") ?? "").trim().toUpperCase();
+  const semesterYear = Number(formData.get("semesterYear"));
+  const semesterPeriod = String(formData.get("semesterPeriod") ?? "").toUpperCase();
+  const repeatType = enumValue(formData.get("repeatType"));
+  const deadlineDay = enumValue(formData.get("deadlineDay"));
+  const deadlineTime = String(formData.get("deadlineTime") ?? "");
+  const numberOfWeeks = numberValue(formData.get("weeks"), 0);
+  const startDateValue = String(formData.get("startDate") ?? "");
+  const existingAssessment = await prisma.assessment.findUnique({ where: { id: assessmentId }, select: { feedbackVisibility: true } });
+  if (!existingAssessment) return;
+  const feedbackVisibility = enumValue(formData.get("feedbackVisibility")) || existingAssessment.feedbackVisibility;
+  const validDate = /^\d{4}-\d{2}-\d{2}$/.test(startDateValue) && !Number.isNaN(new Date(`${startDateValue}T00:00:00`).valueOf());
+
+  if (
+    !assessmentId || !name || !unitCode || !Number.isInteger(semesterYear) ||
+    !["S1", "S2"].includes(semesterPeriod) || !["WEEKLY", "FORTNIGHTLY"].includes(repeatType) ||
+    !["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY"].includes(deadlineDay) ||
+    !/^([01]\d|2[0-3]):[0-5]\d$/.test(deadlineTime) || !Number.isInteger(numberOfWeeks) || numberOfWeeks < 1 || numberOfWeeks > 100 ||
+    !validDate || !["IMMEDIATE_AFTER_SUBMISSION", "AFTER_DEADLINE"].includes(feedbackVisibility)
+  ) return;
+
+  const weeks = await prisma.assessmentWeek.findMany({
+    where: { assessmentId },
+    orderBy: { weekNumber: "asc" },
+    include: { _count: { select: { submissions: true } } },
+  });
+  const weeksToRemove = weeks.filter((week) => week.weekNumber > numberOfWeeks);
+  if (weeksToRemove.some((week) => week._count.submissions > 0)) return;
+
+  const assessmentWeighting = numberValue(formData.get("assessmentWeighting"), 0);
+  const processWeighting = numberValue(formData.get("processWeighting"), 0);
+  const cohortSize = numberValue(formData.get("cohortSize"), 0);
+  const studentsPerGroup = numberValue(formData.get("studentsPerGroup"), 1);
+  const educatorCount = numberValue(formData.get("educatorCount"), 0);
+  if ([assessmentWeighting, processWeighting].some((value) => value < 0 || value > 100) ||
+      ![cohortSize, studentsPerGroup, educatorCount].every((value) => Number.isInteger(value) && value >= 0) || studentsPerGroup < 1) return;
+
+  await prisma.$transaction(async (transaction) => {
+    await transaction.assessment.update({
+      where: { id: assessmentId },
+      data: {
+        name,
+        unitCode,
+        semester: `${semesterYear} ${semesterPeriod}`,
+        assessmentWeighting,
+        processWeighting,
+        cohortSize,
+        studentsPerGroup,
+        educatorCount,
+        repeatType: repeatType as "WEEKLY" | "FORTNIGHTLY",
+        deadlineDay: deadlineDay as "MONDAY" | "TUESDAY" | "WEDNESDAY" | "THURSDAY" | "FRIDAY" | "SATURDAY" | "SUNDAY",
+        deadlineTime,
+        numberOfWeeks,
+        startDate: new Date(`${startDateValue}T00:00:00`),
+        feedbackVisibility: feedbackVisibility as "IMMEDIATE_AFTER_SUBMISSION" | "AFTER_DEADLINE",
+      },
+    });
+
+    for (let index = 0; index < numberOfWeeks; index += 1) {
+      const weekNumber = index + 1;
+      await transaction.assessmentWeek.upsert({
+        where: { assessmentId_weekNumber: { assessmentId, weekNumber } },
+        update: {
+          opensAt: buildOpenDate(startDateValue, deadlineDay, deadlineTime, index, repeatType),
+          dueAt: buildDueDate(startDateValue, deadlineDay, deadlineTime, index, repeatType),
+        },
+        create: {
+          assessmentId,
+          weekNumber,
+          opensAt: buildOpenDate(startDateValue, deadlineDay, deadlineTime, index, repeatType),
+          dueAt: buildDueDate(startDateValue, deadlineDay, deadlineTime, index, repeatType),
+        },
+      });
+    }
+    if (weeksToRemove.length > 0) {
+      await transaction.assessmentWeek.deleteMany({ where: { id: { in: weeksToRemove.map((week) => week.id) } } });
+    }
+  });
+
+  revalidatePath("/admin");
+  revalidatePath(`/admin/assessments/${assessmentId}`);
+  revalidatePath(`/admin/assessments/${assessmentId}/workspace`);
+  revalidatePath(`/educator/assessments/${assessmentId}`);
+  redirect(`/admin/assessments/${assessmentId}`);
 }
 
 export async function invitePastedEducatorsAction(_previousState: EducatorInviteActionState, formData: FormData): Promise<EducatorInviteActionState> {

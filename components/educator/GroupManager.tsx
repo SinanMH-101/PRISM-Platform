@@ -2,7 +2,7 @@
 
 import { useActionState, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { addStudentAction, createGroupAction, deleteGroupAction, removeStudentFromGroupAction, updateGroupCapacityAction, type AddStudentActionState } from "@/app/educator/actions";
+import { addStudentAction, createGroupAction, deleteGroupAction, importGroupsCsvAction, removeStudentFromGroupAction, updateGroupCapacityAction, type AddStudentActionState, type ImportGroupsActionState } from "@/app/educator/actions";
 
 type Group = {
   id: string;
@@ -33,8 +33,10 @@ export default function GroupManager({ assessmentId, studentsPerGroup, groups }:
   const [creatingGroup, setCreatingGroup] = useState(false);
   const [addingTo, setAddingTo] = useState<Group | null>(null);
   const [editingCapacity, setEditingCapacity] = useState<Group | null>(null);
+  const [importingCsv, setImportingCsv] = useState(false);
   const [credentials, setCredentials] = useState<AddStudentActionState | null>(null);
   const [studentState, studentAction, studentPending] = useActionState(addStudentAction, { status: "idle" } as AddStudentActionState);
+  const [importState, importAction, importPending] = useActionState(importGroupsCsvAction, { status: "idle" } as ImportGroupsActionState);
 
   useEffect(() => {
     if (studentState.status === "success") {
@@ -42,6 +44,10 @@ export default function GroupManager({ assessmentId, studentsPerGroup, groups }:
       setCredentials(studentState);
     }
   }, [studentState]);
+
+  useEffect(() => {
+    if (importState.status === "success") router.refresh();
+  }, [importState.status, router]);
 
   useEffect(() => {
     const hasInvitedStudents = groups.some((group) =>
@@ -63,11 +69,14 @@ export default function GroupManager({ assessmentId, studentsPerGroup, groups }:
           <h2 className="text-2xl font-bold">Groups</h2>
           <p className="mt-1 text-sm text-brand-muted">Create groups, then add students from each group row.</p>
         </div>
+        <div className="flex flex-wrap justify-end gap-2">
+          <button type="button" onClick={() => setImportingCsv(true)} className="focus-ring rounded-lg border border-brand-border bg-white px-4 py-3 text-sm font-semibold text-brand-primary hover:bg-brand-background">Import group CSV</button>
         {groups.length > 0 && (
           <button type="button" onClick={() => setCreatingGroup(true)} className="focus-ring flex items-center gap-2 rounded-lg bg-brand-primary px-4 py-3 text-sm font-semibold text-white hover:opacity-90">
             <PlusIcon /> Create group
           </button>
         )}
+        </div>
       </div>
 
       {groups.length === 0 ? (
@@ -161,6 +170,19 @@ export default function GroupManager({ assessmentId, studentsPerGroup, groups }:
             <label className="block text-sm font-semibold">Student email<input required name="studentEmail" type="email" autoComplete="email" className="focus-ring mt-2 h-11 w-full rounded-lg border border-brand-border px-3 font-normal" /></label>
             {studentState.status === "error" && <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm font-medium text-red-700">{studentState.message}</p>}
             <FormButtons onCancel={() => setAddingTo(null)} submitLabel={studentPending ? "Adding..." : "Add student"} disabled={studentPending} />
+          </form>
+        </Modal>
+      )}
+
+      {importingCsv && (
+        <Modal title="Import groups from CSV" onClose={() => setImportingCsv(false)}>
+          <form action={importAction} className="space-y-4">
+            <input type="hidden" name="assessmentId" value={assessmentId} />
+            <div className="rounded-lg bg-brand-background p-3 text-sm text-brand-muted"><p className="font-semibold text-brand-text">Required columns</p><p className="mt-1">First name, Last name, ID number, Email address, Groups</p></div>
+            <label className="block text-sm font-semibold">CSV or tab-delimited file<input required name="csv" type="file" accept=".csv,.tsv,text/csv,text/tab-separated-values" className="focus-ring mt-2 w-full rounded-lg border border-brand-border px-3 py-2 font-normal" /></label>
+            {importState.status === "error" && <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm font-medium text-red-700">{importState.message}</p>}
+            {importState.status === "success" && <div className="max-h-72 space-y-3 overflow-y-auto rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm"><p className="font-bold text-emerald-800">{importState.message}</p><p className="text-emerald-800">{importState.groupsCreated} new groups created.</p>{Boolean(importState.skipped?.length) && <div><p className="font-semibold text-amber-800">Skipped rows</p><ul className="mt-1 list-disc space-y-1 pl-5 text-amber-800">{importState.skipped?.map((item) => <li key={item}>{item}</li>)}</ul></div>}{Boolean(importState.credentials?.length) && <div><p className="font-semibold text-emerald-900">New student credentials — copy now</p><div className="mt-2 space-y-2">{importState.credentials?.map((item) => <div key={item.username} className="rounded bg-white p-2 font-mono text-xs"><p>{item.name}</p><p>{item.username}</p><p>{item.temporaryPassword}</p></div>)}</div></div>}</div>}
+            <div className="flex justify-end gap-3"><button type="button" onClick={() => setImportingCsv(false)} className="focus-ring rounded-lg border border-brand-border px-4 py-2.5 text-sm font-semibold">Close</button><button disabled={importPending} className="focus-ring rounded-lg bg-brand-primary px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60">{importPending ? "Importing..." : "Import groups"}</button></div>
           </form>
         </Modal>
       )}

@@ -14,10 +14,11 @@ export default async function StudentAssessmentRoute({ params }: { params: Promi
       group: {
         include: {
           class: { include: { assessment: { include: { weeks: { orderBy: { weekNumber: "asc" } } } } } },
+          educator: { select: { name: true } },
           members: { include: { student: true }, orderBy: { student: { name: "asc" } } },
           submissions: {
-            where: { submittedByStudentId: student.id, assessmentWeek: { assessmentId } },
-            include: { scores: true, feedback: true },
+            where: { assessmentWeek: { assessmentId } },
+            include: { scores: true, feedback: true, submittedBy: true },
           },
         },
       },
@@ -27,17 +28,17 @@ export default async function StudentAssessmentRoute({ params }: { params: Promi
 
   const { group } = membership;
   const assessment = group.class.assessment;
-  const submissions = new Map(group.submissions.map((submission) => [submission.assessmentWeekId, submission]));
+  const ownSubmissions = new Map(group.submissions.filter((submission) => submission.submittedByStudentId === student.id).map((submission) => [submission.assessmentWeekId, submission]));
   const now = new Date();
   const formatter = new Intl.DateTimeFormat("en-AU", { weekday: "short", day: "numeric", month: "short", hour: "numeric", minute: "2-digit", timeZone: "Australia/Sydney" });
   const data: StudentAssessmentData = {
     assessment: { id: assessment.id, name: assessment.name, unitCode: assessment.unitCode, semester: assessment.semester },
-    className: group.class.name,
+    educatorName: group.educator?.name ?? "Not assigned",
     group: { id: group.id, name: group.name },
     currentStudent: { id: student.id, name: student.name },
     members: group.members.map(({ student: member }) => ({ id: member.id, name: member.name, email: member.email, initials: member.name.split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toUpperCase() })),
     weeks: assessment.weeks.map((week) => {
-      const submission = submissions.get(week.id);
+      const submission = ownSubmissions.get(week.id);
       const memberIds = group.members.map((member) => member.studentId).sort();
       const submittedScoreIds = submission?.scores.map((score) => score.targetStudentId).sort() ?? [];
       const effectiveTotal = submission?.scores.reduce((sum, score) => sum + (score.educatorOverridePoints ?? score.points), 0) ?? 0;
@@ -51,6 +52,21 @@ export default async function StudentAssessmentRoute({ params }: { params: Promi
         scores: submission ? Object.fromEntries(submission.scores.map((score) => [score.targetStudentId, score.educatorOverridePoints ?? score.points])) : null,
         scoreOverrides: submission ? Object.fromEntries(submission.scores.map((score) => [score.targetStudentId, score.educatorOverridePoints !== null])) : null,
         feedback: submission ? Object.fromEntries(submission.feedback.map((item) => [item.toStudentId, item.comment])) : null,
+        receivedReviews: submissionComplete ? group.submissions
+          .filter((peerSubmission) => peerSubmission.assessmentWeekId === week.id && peerSubmission.submittedByStudentId !== student.id)
+          .flatMap((peerSubmission) => {
+            const score = peerSubmission.scores.find((item) => item.targetStudentId === student.id);
+            if (!score) return [];
+            const comment = peerSubmission.feedback.find((item) => item.toStudentId === student.id)?.comment ?? "";
+            const from = peerSubmission.submittedBy;
+            return [{
+              fromStudentId: from.id,
+              fromStudentName: from.name,
+              fromStudentInitials: from.name.split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toUpperCase(),
+              points: score.points,
+              comment,
+            }];
+          }) : null,
       };
     }),
   };

@@ -8,7 +8,6 @@ import {
   removeEducatorAction,
   resendEducatorInviteAction,
   type EducatorInviteActionState,
-  uploadEducatorCsvAction,
 } from "@/app/admin/actions";
 import type { InviteEmailPreview } from "@/lib/invites";
 
@@ -26,15 +25,14 @@ const emptyState: EducatorInviteActionState = { previews: [] };
 export default function EducatorInvitePanel({ assessmentId, educators }: { assessmentId: string; educators: EducatorRow[] }) {
   const router = useRouter();
   const [pastedState, pastedAction, pastedPending] = useActionState(invitePastedEducatorsAction, emptyState);
-  const [csvState, csvAction, csvPending] = useActionState(uploadEducatorCsvAction, emptyState);
   const [manualState, manualAction, manualPending] = useActionState(createEducatorAccountAction, emptyState);
   const [resendState, resendAction, resendPending] = useActionState(resendEducatorInviteAction, emptyState);
   const [previews, setPreviews] = useState<InviteEmailPreview[]>([]);
 
   useEffect(() => {
-    const latest = [pastedState, csvState, manualState, resendState].find((state) => state.previews.length > 0);
+    const latest = [pastedState, manualState, resendState].find((state) => state.previews.length > 0);
     if (latest) setPreviews(latest.previews);
-  }, [pastedState, csvState, manualState, resendState]);
+  }, [pastedState, manualState, resendState]);
 
   useEffect(() => {
     const interval = window.setInterval(() => {
@@ -46,7 +44,7 @@ export default function EducatorInvitePanel({ assessmentId, educators }: { asses
     return () => window.clearInterval(interval);
   }, [router]);
 
-  const error = pastedState.error ?? csvState.error ?? manualState.error ?? resendState.error;
+  const error = pastedState.error ?? manualState.error ?? resendState.error;
 
   return (
     <div className="space-y-6">
@@ -62,7 +60,7 @@ export default function EducatorInvitePanel({ assessmentId, educators }: { asses
             Paste email addresses
             <textarea
               name="emails"
-              placeholder="alex.smith@university.edu, priya.rao@university.edu"
+              placeholder="jane.doe@university.edu"
               className="focus-ring mt-2 min-h-24 w-full resize-y rounded-lg border border-brand-border px-3 py-2 font-normal"
             />
           </label>
@@ -71,17 +69,6 @@ export default function EducatorInvitePanel({ assessmentId, educators }: { asses
               {pastedPending ? "Preparing previews..." : "Send pasted invites"}
             </button>
           </div>
-        </form>
-
-        <form action={csvAction} className="mt-5 flex flex-col gap-3 rounded-lg border border-brand-border p-4 sm:flex-row sm:items-end">
-          <input type="hidden" name="assessmentId" value={assessmentId} />
-          <label className="grow text-sm font-semibold">
-            Upload CSV
-            <input name="csv" type="file" accept=".csv,text/csv" className="focus-ring mt-2 w-full rounded-lg border border-brand-border px-3 py-2 font-normal" />
-          </label>
-          <button disabled={csvPending} className="focus-ring rounded-lg border border-brand-border px-4 py-2 text-sm font-semibold hover:bg-brand-background disabled:opacity-60">
-            {csvPending ? "Importing..." : "Import CSV"}
-          </button>
         </form>
 
         <form action={manualAction} className="mt-6 grid gap-4 border-t border-brand-border pt-5">
@@ -100,7 +87,6 @@ export default function EducatorInvitePanel({ assessmentId, educators }: { asses
       <section className="overflow-hidden rounded-lg border border-brand-border bg-brand-surface shadow-soft">
         <div className="border-b border-brand-border p-5">
           <h2 className="text-xl font-bold">Educator invite status</h2>
-          <p className="mt-1 text-sm text-brand-muted">Email delivery is currently shown as a local preview popup.</p>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[860px] border-collapse text-left text-sm">

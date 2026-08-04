@@ -7,7 +7,7 @@ import { submitStudentAssessment } from "@/app/student/assessments/actions";
 
 export type StudentAssessmentData = {
   assessment: { id: string; name: string; unitCode: string; semester: string };
-  className: string;
+  educatorName: string;
   group: { id: string; name: string };
   currentStudent: { id: string; name: string };
   members: { id: string; name: string; email: string; initials: string }[];
@@ -19,10 +19,27 @@ export type StudentAssessmentData = {
     scores: Record<string, number> | null;
     scoreOverrides: Record<string, boolean> | null;
     feedback: Record<string, string> | null;
+    receivedReviews: { fromStudentId: string; fromStudentName: string; fromStudentInitials: string; points: number; comment: string }[] | null;
   }[];
 };
 
-const colours = ["#31536a", "#59798e", "#88a0ae", "#b5c3cb", "#7f9cac", "#9aaeb9"];
+// Distinct, dark colours keep students easy to identify while preserving white-text contrast.
+const studentColours = [
+  "#1d4ed8", // blue
+  "#c2410c", // orange
+  "#047857", // green
+  "#7e22ce", // purple
+  "#be123c", // rose
+  "#0e7490", // cyan
+  "#a16207", // amber
+  "#4338ca", // indigo
+  "#0f766e", // teal
+  "#a21caf", // fuchsia
+];
+
+function studentColour(index: number) {
+  return studentColours[index % studentColours.length];
+}
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max);
@@ -146,7 +163,7 @@ export default function StudentAssessmentPage({ data }: { data: StudentAssessmen
             <p className="text-xs font-semibold uppercase tracking-wide text-brand-muted">{data.assessment.unitCode} · {data.assessment.semester}</p>
             <h1 className="mt-2 text-2xl font-bold">{data.assessment.name}</h1>
             <div className="mt-5 grid grid-cols-2 gap-3 text-sm">
-              <Info label="Class" value={data.className} /><Info label="Group" value={data.group.name} />
+              <Info label="Educator" value={data.educatorName} /><Info label="Group" value={data.group.name} />
             </div>
           </div>
           <div className="rounded-2xl border border-brand-border bg-brand-surface p-4 shadow-soft">
@@ -171,7 +188,7 @@ export default function StudentAssessmentPage({ data }: { data: StudentAssessmen
             <div className="mt-8">
               {hasEducatorOverrides && <div className="mb-5 flex gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800"><span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-amber-500 font-bold text-white">!</span><p><span className="font-bold">Scores adjusted by your educator.</span> An exclamation mark identifies each updated contribution score.</p></div>}
               <div ref={trackRef} className="segment-slider relative h-16 rounded-2xl border border-brand-border bg-brand-background p-2">
-                <div className="flex h-full overflow-hidden rounded-xl">{allocations.map((allocation, index) => <div key={data.members[index].id} className="flex min-w-[2px] items-center justify-center text-xs font-bold text-white" style={{ width: `${allocation}%`, backgroundColor: colours[index % colours.length] }} title={`${data.members[index].name}: ${allocation} points${week.scoreOverrides?.[data.members[index].id] ? " (adjusted by educator)" : ""}`}>{allocation >= 7 ? <>{allocation}{week.scoreOverrides?.[data.members[index].id] && <span className="ml-0.5">!</span>}</> : ""}</div>)}</div>
+                <div className="flex h-full overflow-hidden rounded-xl">{allocations.map((allocation, index) => <div key={data.members[index].id} className="flex min-w-[2px] items-center justify-center text-xs font-bold text-white" style={{ width: `${allocation}%`, backgroundColor: studentColour(index) }} title={`${data.members[index].name}: ${allocation} points${week.scoreOverrides?.[data.members[index].id] ? " (adjusted by educator)" : ""}`}>{allocation >= 7 ? <>{allocation}{week.scoreOverrides?.[data.members[index].id] && <span className="ml-0.5">!</span>}</> : ""}</div>)}</div>
                 {handles.map((handle, index) => <button key={index} aria-label={`Move divider ${index + 1}`} disabled={isLocked} onPointerDown={(event) => startDrag(event, index)} onPointerMove={(event) => event.buttons === 1 && updateHandle(index, event.clientX)} className="absolute top-1/2 h-12 w-5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-brand-primary shadow-lg disabled:cursor-not-allowed disabled:opacity-40" style={{ left: `${handle}%` }} />)}
               </div>
             </div>
@@ -179,18 +196,46 @@ export default function StudentAssessmentPage({ data }: { data: StudentAssessmen
 
           <section className="rounded-2xl border border-brand-border bg-brand-surface p-6 shadow-soft">
             <h3 className="text-xl font-bold">Contribution table</h3>
-            <div className="mt-5 overflow-x-auto rounded-xl border border-brand-border"><table className="w-full min-w-[640px] border-collapse text-left text-sm"><thead className="bg-brand-background text-brand-muted"><tr><th className="px-4 py-3">Student</th><th className="px-4 py-3">Email</th><th className="px-4 py-3">Points</th><th className="px-4 py-3">Share</th></tr></thead><tbody className="divide-y divide-brand-border bg-white">{data.members.map((member, index) => <tr key={member.id}><td className="px-4 py-4"><div className="flex items-center gap-3"><div className="flex h-9 w-9 items-center justify-center rounded-full text-xs font-bold text-white" style={{ backgroundColor: colours[index % colours.length] }}>{member.initials}</div><span className="font-semibold">{member.name}{member.id === data.currentStudent.id ? " (you)" : ""}</span></div></td><td className="px-4 py-4 text-brand-muted">{member.email}</td><td className="px-4 py-4 font-bold">{allocations[index]}{week.scoreOverrides?.[member.id] && <span className="ml-1 text-amber-600" title="Adjusted by educator">!</span>}</td><td className="px-4 py-4 text-brand-muted">{allocations[index]}%{week.scoreOverrides?.[member.id] && <span className="ml-1 font-bold text-amber-600" title="Adjusted by educator">!</span>}</td></tr>)}</tbody></table></div>
+            <div className="mt-5 overflow-x-auto rounded-xl border border-brand-border"><table className="w-full min-w-[640px] border-collapse text-left text-sm"><thead className="bg-brand-background text-brand-muted"><tr><th className="px-4 py-3">Student</th><th className="px-4 py-3">Email</th><th className="px-4 py-3">Points</th><th className="px-4 py-3">Share</th></tr></thead><tbody className="divide-y divide-brand-border bg-white">{data.members.map((member, index) => <tr key={member.id} className="border-l-4" style={{ borderLeftColor: studentColour(index) }}><td className="px-4 py-4"><div className="flex items-center gap-3"><div className="flex h-9 w-9 items-center justify-center rounded-full text-xs font-bold text-white" style={{ backgroundColor: studentColour(index) }}>{member.initials}</div><span className="font-semibold">{member.name}{member.id === data.currentStudent.id ? " (you)" : ""}</span></div></td><td className="px-4 py-4 text-brand-muted">{member.email}</td><td className="px-4 py-4 font-bold">{allocations[index]}{week.scoreOverrides?.[member.id] && <span className="ml-1 text-amber-600" title="Adjusted by educator">!</span>}</td><td className="px-4 py-4 text-brand-muted">{allocations[index]}%{week.scoreOverrides?.[member.id] && <span className="ml-1 font-bold text-amber-600" title="Adjusted by educator">!</span>}</td></tr>)}</tbody></table></div>
           </section>
 
           <section className="rounded-2xl border border-brand-border bg-brand-surface p-6 shadow-soft">
-            <h3 className="text-xl font-bold">Weekly feedback</h3>
+            <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-start">
+              <div>
+                <h3 className="text-xl font-bold">Weekly feedback</h3>
+                <p className="mt-1 text-sm text-brand-muted">{week.status === "SUBMITTED" ? `Feedback and scores your teammates gave you for Week ${week.number}.` : "Reflect on your contribution and share feedback with your teammates."}</p>
+              </div>
+              {week.status === "SUBMITTED" && <span className="w-fit rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">Submission received</span>}
+            </div>
+
+            {week.status === "SUBMITTED" ? (
+              <div className="mt-5 grid gap-4 sm:grid-cols-2">
+                {(week.receivedReviews ?? []).map((review) => {
+                  const memberIndex = data.members.findIndex((member) => member.id === review.fromStudentId);
+                  const colour = studentColour(memberIndex < 0 ? 0 : memberIndex);
+                  const comment = review.comment.trim();
+                  return (
+                    <article key={review.fromStudentId} className="overflow-hidden rounded-xl border border-brand-border bg-white" style={{ borderTopColor: colour, borderTopWidth: 4 }}>
+                      <div className="flex items-center justify-between gap-3 border-b border-brand-border px-4 py-3">
+                        <div className="flex min-w-0 items-center gap-3">
+                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white" style={{ backgroundColor: colour }}>{review.fromStudentInitials}</div>
+                          <div className="min-w-0"><p className="truncate font-semibold">{review.fromStudentName}</p><p className="text-xs text-brand-muted">Feedback for you</p></div>
+                        </div>
+                        <span className="shrink-0 rounded-full px-3 py-1 text-sm font-bold text-white" style={{ backgroundColor: colour }}>{review.points} points</span>
+                      </div>
+                      <p className={`min-h-24 whitespace-pre-wrap px-4 py-4 text-sm leading-6 ${comment ? "text-brand-text" : "italic text-brand-muted"}`}>{comment || "No comment provided."}</p>
+                    </article>
+                  );
+                })}
+                {(week.receivedReviews ?? []).length === 0 && <div className="sm:col-span-2 rounded-xl border border-dashed border-brand-border bg-brand-background p-6 text-center text-sm text-brand-muted">No teammate submissions are available yet. Their feedback and scores will appear here as they submit.</div>}
+              </div>
+            ) : <>
             {currentStudentMember && (
               <div className="mt-5 rounded-2xl border-2 border-brand-primary bg-brand-background p-5">
                 <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
                   <div>
                     <p className="text-xs font-bold uppercase tracking-wide text-brand-primary">Your reflection</p>
-                    <p className="mt-1 text-lg font-bold">How did you contribute this week?</p>
-                    <p className="mt-1 text-sm text-brand-muted">Consider your tasks, communication, reliability, and support for the group.</p>
+                    <p className="mt-1 text-lg font-bold">Reflect on your contribution this week! </p>
                   </div>
                   <span className="rounded-full bg-brand-primary px-3 py-1 text-xs font-semibold text-white">About you</span>
                 </div>
@@ -223,6 +268,7 @@ export default function StudentAssessmentPage({ data }: { data: StudentAssessmen
                 ))}
               </div>
             </div>
+            </>}
           </section>
 
           {message && <div className={`rounded-2xl border p-5 ${message.type === "success" ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-red-200 bg-red-50 text-red-800"}`} role="status">{message.text}</div>}

@@ -20,9 +20,11 @@ export default async function AssessmentDetailPage({ params }: { params: Promise
           <h1 className="mt-1 text-3xl font-bold">{assessment.name}</h1>
           <p className="mt-1 text-sm font-semibold text-brand-muted">{assessment.semester}</p>
         </div>
-        <Link href={`/admin/assessments/${assessment.id}/educators`} className="focus-ring rounded-lg bg-brand-primary px-4 py-3 text-sm font-semibold text-white hover:opacity-90">
-          Manage educators
-        </Link>
+        <div className="flex flex-wrap gap-3">
+          <Link href={`/admin/assessments/${assessment.id}/edit`} className="focus-ring rounded-lg border border-brand-border px-4 py-3 text-sm font-semibold hover:bg-brand-background">Edit assessment</Link>
+          <Link href={`/admin/assessments/${assessment.id}/workspace`} className="focus-ring rounded-lg border border-brand-primary px-4 py-3 text-sm font-semibold text-brand-primary hover:bg-brand-background">View Educator Dashboard</Link>
+          <Link href={`/admin/assessments/${assessment.id}/educators`} className="focus-ring rounded-lg bg-brand-primary px-4 py-3 text-sm font-semibold text-white hover:opacity-90">Manage educators</Link>
+        </div>
       </div>
 
       <section className="grid gap-4 md:grid-cols-4">

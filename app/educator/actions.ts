@@ -23,6 +23,112 @@ export type OverrideScoresActionState = {
   message?: string;
 };
 
+export type ImportGroupsActionState = {
+  status: "idle" | "error" | "success";
+  message?: string;
+  groupsCreated?: number;
+  studentsImported?: number;
+  skipped?: string[];
+  credentials?: { name: string; username: string; temporaryPassword: string }[];
+};
+
+function parseDelimitedFile(text: string) {
+  const firstLine = text.split(/\r?\n/, 1)[0] ?? "";
+  const delimiter = firstLine.includes("\t") ? "\t" : ",";
+  const rows: string[][] = [];
+  let row: string[] = [];
+  let field = "";
+  let quoted = false;
+  for (let index = 0; index < text.length; index += 1) {
+    const character = text[index];
+    if (character === '"') {
+      if (quoted && text[index + 1] === '"') { field += '"'; index += 1; }
+      else quoted = !quoted;
+    } else if (character === delimiter && !quoted) {
+      row.push(field.trim()); field = "";
+    } else if ((character === "\n" || character === "\r") && !quoted) {
+      if (character === "\r" && text[index + 1] === "\n") index += 1;
+      row.push(field.trim()); field = "";
+      if (row.some(Boolean)) rows.push(row);
+      row = [];
+    } else field += character;
+  }
+  row.push(field.trim());
+  if (row.some(Boolean)) rows.push(row);
+  return rows;
+}
+
+export async function importGroupsCsvAction(_previousState: ImportGroupsActionState, formData: FormData): Promise<ImportGroupsActionState> {
+  const educator = await requireEducator();
+  const assessmentId = String(formData.get("assessmentId") ?? "");
+  const file = formData.get("csv");
+  if (!(file instanceof File) || file.size === 0) return { status: "error", message: "Choose a CSV or tab-delimited file first." };
+
+  const invite = await prisma.assessmentEducator.findFirst({
+    where: { assessmentId, userId: educator.id, status: "JOINED", removedAt: null },
+    include: { assessment: true },
+  });
+  if (!invite) return { status: "error", message: "This assessment could not be accessed." };
+
+  const rows = parseDelimitedFile(await file.text());
+  const headers = rows[0]?.map((header) => header.toLowerCase().replace(/[^a-z0-9]/g, "")) ?? [];
+  const column = (name: string) => headers.indexOf(name);
+  const firstNameIndex = column("firstname");
+  const lastNameIndex = column("lastname");
+  const studentIdIndex = column("idnumber");
+  const emailIndex = column("emailaddress");
+  const groupsIndex = column("groups");
+  if ([firstNameIndex, lastNameIndex, studentIdIndex, emailIndex, groupsIndex].some((index) => index < 0)) {
+    return { status: "error", message: "The file must contain First name, Last name, ID number, Email address, and Groups columns." };
+  }
+
+  const assessmentClass = (await prisma.class.findFirst({ where: { assessmentId } })) ?? await prisma.class.create({ data: { assessmentId, name: "Default class" } });
+  const groupCache = new Map<string, { id: string; educatorId: string | null }>();
+  const credentials: NonNullable<ImportGroupsActionState["credentials"]> = [];
+  const skipped: string[] = [];
+  let groupsCreated = 0;
+  let studentsImported = 0;
+
+  for (const [rowOffset, values] of rows.slice(1).entries()) {
+    const rowNumber = rowOffset + 2;
+    const firstName = values[firstNameIndex]?.trim() ?? "";
+    const lastName = values[lastNameIndex]?.trim() ?? "";
+    const name = `${firstName} ${lastName}`.trim();
+    const studentId = values[studentIdIndex]?.trim() ?? "";
+    const email = values[emailIndex]?.trim().toLowerCase() ?? "";
+    const groupName = (values[groupsIndex]?.split(";")[0] ?? "").trim();
+    if (!name || !studentId || !emailPattern.test(email) || !groupName) { skipped.push(`Row ${rowNumber}: missing or invalid student/group details.`); continue; }
+
+    let group = groupCache.get(groupName);
+    if (!group) {
+      const existingGroup = await prisma.group.findFirst({ where: { name: groupName, class: { assessmentId } }, select: { id: true, educatorId: true } });
+      if (existingGroup?.educatorId && existingGroup.educatorId !== educator.id) { skipped.push(`Row ${rowNumber}: ${groupName} belongs to another educator.`); continue; }
+      group = existingGroup ?? await prisma.group.create({ data: { name: groupName, classId: assessmentClass.id, educatorId: educator.id }, select: { id: true, educatorId: true } });
+      if (!existingGroup) groupsCreated += 1;
+      else if (!existingGroup.educatorId) await prisma.group.update({ where: { id: existingGroup.id }, data: { educatorId: educator.id } });
+      groupCache.set(groupName, group);
+    }
+
+    const [emailOwner, idOwner] = await Promise.all([prisma.user.findUnique({ where: { email } }), prisma.user.findUnique({ where: { studentId } })]);
+    if ((emailOwner && emailOwner.role !== "STUDENT") || (idOwner && idOwner.id !== emailOwner?.id)) { skipped.push(`Row ${rowNumber}: email or ID is already used by another account.`); continue; }
+    const existingMembership = emailOwner ? await prisma.groupMember.findFirst({ where: { studentId: emailOwner.id, group: { class: { assessmentId }, id: { not: group.id } } }, select: { group: { select: { name: true } } } }) : null;
+    if (existingMembership) { skipped.push(`Row ${rowNumber}: ${name} is already in ${existingMembership.group.name}.`); continue; }
+
+    const temporaryPassword = !emailOwner?.passwordHash ? generateTemporaryPassword() : null;
+    const student = emailOwner ? await prisma.user.update({ where: { id: emailOwner.id }, data: { name, studentId, ...(temporaryPassword ? { passwordHash: await hashPassword(temporaryPassword), mustChangePassword: true } : {}) } }) : await prisma.user.create({ data: { name, studentId, email, username: email, role: "STUDENT", passwordHash: await hashPassword(temporaryPassword!), mustChangePassword: true } });
+    await prisma.groupMember.upsert({ where: { groupId_studentId: { groupId: group.id, studentId: student.id } }, update: {}, create: { groupId: group.id, studentId: student.id } });
+    if (temporaryPassword) credentials.push({ name, username: student.username ?? email, temporaryPassword });
+    studentsImported += 1;
+  }
+
+  for (const group of groupCache.values()) {
+    const memberCount = await prisma.groupMember.count({ where: { groupId: group.id } });
+    if (memberCount > invite.assessment.studentsPerGroup) await prisma.group.update({ where: { id: group.id }, data: { capacityOverride: memberCount } });
+  }
+  revalidatePath(`/educator/assessments/${assessmentId}`);
+  return { status: "success", message: `Imported ${studentsImported} students into ${groupCache.size} groups.`, groupsCreated, studentsImported, skipped: skipped.slice(0, 20), credentials };
+}
+
 export async function educatorLogoutAction() {
   await clearSession();
   redirect("/login");
