@@ -8,6 +8,9 @@ type AdminShellSettings = {
   primaryColour: string;
   secondaryColour: string;
   accentColour: string;
+  nightPrimaryColour: string;
+  nightSecondaryColour: string;
+  nightAccentColour: string;
 };
 
 export default function AdminShell({
@@ -21,6 +24,9 @@ export default function AdminShell({
     "--color-secondary": settings.secondaryColour,
     "--color-muted": settings.secondaryColour,
     "--color-accent": settings.accentColour,
+    "--color-night-primary": settings.nightPrimaryColour,
+    "--color-night-secondary": settings.nightSecondaryColour,
+    "--color-night-accent": settings.nightAccentColour,
   } as CSSProperties;
 
   return (

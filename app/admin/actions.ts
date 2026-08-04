@@ -273,23 +273,27 @@ export async function resendEducatorInviteAction(_previousState: EducatorInviteA
 
 export async function saveSettingsAction(formData: FormData) {
   await requireAdmin();
+  const colours = {
+    primaryColour: String(formData.get("primaryColour") ?? "#31536a"),
+    secondaryColour: String(formData.get("secondaryColour") ?? "#59798e"),
+    accentColour: String(formData.get("accentColour") ?? "#0f766e"),
+    nightPrimaryColour: String(formData.get("nightPrimaryColour") ?? "#7dd3fc"),
+    nightSecondaryColour: String(formData.get("nightSecondaryColour") ?? "#94a3b8"),
+    nightAccentColour: String(formData.get("nightAccentColour") ?? "#2dd4bf"),
+  };
   await prisma.universitySettings.upsert({
     where: { id: "default" },
     update: {
       name: String(formData.get("name") ?? "").trim() || null,
       logoUrl: String(formData.get("logoUrl") ?? "").trim() || null,
-      primaryColour: String(formData.get("primaryColour") ?? "#31536a"),
-      secondaryColour: String(formData.get("secondaryColour") ?? "#59798e"),
-      accentColour: String(formData.get("accentColour") ?? "#0f766e"),
-    },
+      ...colours,
+    } as never,
     create: {
       id: "default",
       name: String(formData.get("name") ?? "").trim() || null,
       logoUrl: String(formData.get("logoUrl") ?? "").trim() || null,
-      primaryColour: String(formData.get("primaryColour") ?? "#31536a"),
-      secondaryColour: String(formData.get("secondaryColour") ?? "#59798e"),
-      accentColour: String(formData.get("accentColour") ?? "#0f766e"),
-    },
+      ...colours,
+    } as never,
   });
   revalidatePath("/", "layout");
   revalidatePath("/admin/settings");

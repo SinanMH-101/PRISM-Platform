@@ -6,6 +6,9 @@ type SettingsValues = {
   primaryColour: string;
   secondaryColour: string;
   accentColour: string;
+  nightPrimaryColour: string;
+  nightSecondaryColour: string;
+  nightAccentColour: string;
 };
 
 const defaultSettings: SettingsValues = {
@@ -14,6 +17,9 @@ const defaultSettings: SettingsValues = {
   primaryColour: "#31536a",
   secondaryColour: "#59798e",
   accentColour: "#0f766e",
+  nightPrimaryColour: "#7dd3fc",
+  nightSecondaryColour: "#94a3b8",
+  nightAccentColour: "#2dd4bf",
 };
 
 export default function SettingsForm({ settings }: { settings?: SettingsValues | null }) {
@@ -44,12 +50,30 @@ export default function SettingsForm({ settings }: { settings?: SettingsValues |
             <ColourInput label="Accent colour" name="accentColour" defaultValue={values.accentColour} />
           </div>
 
+          <div>
+            <p className="mb-3 text-sm font-semibold">Night mode colours</p>
+            <div className="grid gap-4 md:grid-cols-3">
+              <ColourInput label="Primary colour" name="nightPrimaryColour" defaultValue={values.nightPrimaryColour} />
+              <ColourInput label="Secondary colour" name="nightSecondaryColour" defaultValue={values.nightSecondaryColour} />
+              <ColourInput label="Accent colour" name="nightAccentColour" defaultValue={values.nightAccentColour} />
+            </div>
+          </div>
+
           <div className="rounded-lg border border-brand-border p-4">
-            <p className="text-sm font-semibold">Current saved theme</p>
+            <p className="text-sm font-semibold">Current saved daytime theme</p>
             <div className="mt-3 grid gap-3 md:grid-cols-3">
               <Swatch label="Primary" colour={values.primaryColour} />
               <Swatch label="Secondary" colour={values.secondaryColour} />
               <Swatch label="Accent" colour={values.accentColour} />
+            </div>
+          </div>
+
+          <div className="rounded-lg border border-brand-border bg-black p-4 text-white">
+            <p className="text-sm font-semibold">Current saved night theme</p>
+            <div className="mt-3 grid gap-3 md:grid-cols-3">
+              <Swatch label="Primary" colour={values.nightPrimaryColour} />
+              <Swatch label="Secondary" colour={values.nightSecondaryColour} />
+              <Swatch label="Accent" colour={values.nightAccentColour} />
             </div>
           </div>
 

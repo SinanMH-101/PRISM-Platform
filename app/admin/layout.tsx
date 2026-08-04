@@ -8,6 +8,9 @@ const defaultSettings = {
   primaryColour: "#31536a",
   secondaryColour: "#59798e",
   accentColour: "#0f766e",
+  nightPrimaryColour: "#7dd3fc",
+  nightSecondaryColour: "#94a3b8",
+  nightAccentColour: "#2dd4bf",
 };
 
 export default async function AdminLayout({ children }: Readonly<{ children: React.ReactNode }>) {

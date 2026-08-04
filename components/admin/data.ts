@@ -59,7 +59,19 @@ export async function getAssessmentEducators(assessmentId: string) {
 }
 
 export async function getUniversitySettings() {
-  return prisma.universitySettings.findUnique({ where: { id: "default" } });
+  const settings = await prisma.universitySettings.findUnique({ where: { id: "default" } });
+  if (!settings) return null;
+  const nightSettings = settings as typeof settings & {
+    nightPrimaryColour?: string;
+    nightSecondaryColour?: string;
+    nightAccentColour?: string;
+  };
+  return {
+    ...settings,
+    nightPrimaryColour: nightSettings.nightPrimaryColour ?? "#7dd3fc",
+    nightSecondaryColour: nightSettings.nightSecondaryColour ?? "#94a3b8",
+    nightAccentColour: nightSettings.nightAccentColour ?? "#2dd4bf",
+  };
 }
 
 export function formatSchedule(assessment: Pick<AdminAssessmentDetail, "repeatType" | "deadlineDay" | "deadlineTime">) {

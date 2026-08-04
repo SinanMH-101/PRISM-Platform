@@ -201,6 +201,9 @@ model UniversitySettings {
   primaryColour   String   @default("#31536a")
   secondaryColour String   @default("#59798e")
   accentColour    String   @default("#0f766e")
+  nightPrimaryColour   String @default("#7dd3fc")
+  nightSecondaryColour String @default("#94a3b8")
+  nightAccentColour    String @default("#2dd4bf")
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 }
