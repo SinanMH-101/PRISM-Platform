@@ -291,6 +291,6 @@ export async function saveSettingsAction(formData: FormData) {
       accentColour: String(formData.get("accentColour") ?? "#0f766e"),
     },
   });
-  revalidatePath("/admin", "layout");
+  revalidatePath("/", "layout");
   revalidatePath("/admin/settings");
 }

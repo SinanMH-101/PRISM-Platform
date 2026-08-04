@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { getCurrentUser, getRoleHomePath } from "@/lib/auth";
+import { BrandIdentity } from "@/components/BrandingProvider";
 import LoginForm from "./LoginForm";
 
 export default async function LoginPage() {
@@ -14,8 +15,8 @@ export default async function LoginPage() {
     <main className="flex min-h-screen items-center justify-center bg-brand-background px-5 py-10 text-brand-text">
       <section className="w-full max-w-md rounded-lg border border-brand-border bg-brand-surface p-6 shadow-soft">
         <div className="mb-6">
-          <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-lg bg-brand-primary text-sm font-bold text-white">U</div>
-          <p className="text-sm font-semibold text-brand-primary">Admin access</p>
+          <div className="mb-5"><BrandIdentity subtitle="Team assessment platform" /></div>
+          <p className="text-sm font-semibold text-brand-primary">Account access</p>
           <h1 className="mt-1 text-3xl font-bold">Sign in</h1>
         </div>
         <LoginForm />

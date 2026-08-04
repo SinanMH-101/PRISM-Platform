@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { requireEducator } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { BrandIdentity } from "@/components/BrandingProvider";
 import { educatorLogoutAction, joinAssessmentAction } from "./actions";
 
 export default async function EducatorPage() {
@@ -18,10 +19,7 @@ export default async function EducatorPage() {
     <main className="min-h-screen bg-brand-background text-brand-text">
       <nav className="border-b border-brand-border bg-brand-surface">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-5 py-4">
-          <div>
-            <p className="text-sm font-semibold">Educator workspace</p>
-            <p className="text-xs text-brand-muted">Signed in as {user.name}</p>
-          </div>
+          <BrandIdentity subtitle={`Educator workspace · ${user.name}`} />
           <form action={educatorLogoutAction}>
             <button className="focus-ring rounded-lg border border-brand-border px-3 py-2 text-sm font-semibold hover:bg-brand-background">Log out</button>
           </form>

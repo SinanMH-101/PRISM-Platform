@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { BrandIdentity } from "@/components/BrandingProvider";
 import { PointerEvent, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { submitStudentAssessment } from "@/app/student/assessments/actions";
@@ -146,10 +147,7 @@ export default function StudentAssessmentPage({ data }: { data: StudentAssessmen
     <main className="min-h-screen bg-brand-background text-brand-text">
       <nav className="border-b border-brand-border bg-brand-surface/90 backdrop-blur">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-primary font-semibold text-white">U</div>
-            <div><p className="text-sm font-semibold">University Team Assessment</p><p className="text-xs text-brand-muted">Student submission portal</p></div>
-          </div>
+          <BrandIdentity subtitle="Student submission portal" />
           <div className="flex items-center gap-3">
             <span className="hidden rounded-full border border-brand-border px-4 py-2 text-sm text-brand-muted sm:block">Logged in as {data.currentStudent.name}</span>
             <Link href="/student/dashboard" className="focus-ring rounded-lg border border-brand-border px-3 py-2 text-sm font-semibold hover:bg-brand-background">Dashboard</Link>

@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { requireStudent } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { studentLogoutAction } from "../actions";
+import { BrandIdentity } from "@/components/BrandingProvider";
 
 export default async function StudentDashboardPage() {
   const student = await requireStudent();
@@ -41,10 +42,7 @@ export default async function StudentDashboardPage() {
     <main className="min-h-screen bg-brand-background text-brand-text">
       <nav className="border-b border-brand-border bg-brand-surface">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-4">
-          <div>
-            <p className="text-sm font-semibold">Student dashboard</p>
-            <p className="text-xs text-brand-muted">Signed in as {student.name}</p>
-          </div>
+          <BrandIdentity subtitle={`Student dashboard · ${student.name}`} />
           <div className="flex items-center gap-3">
             <span className="hidden rounded-full bg-brand-background px-3 py-2 text-xs font-semibold text-brand-muted sm:inline-block">
               Student ID: {student.studentId ?? "Not provided"}

@@ -7,6 +7,7 @@ import EducatorProgressDashboard from "@/components/educator/EducatorProgressDas
 import EducatorAssessmentViews from "@/components/educator/EducatorAssessmentViews";
 import GroupSubmissionView from "@/components/educator/GroupSubmissionView";
 import { educatorLogoutAction } from "../../actions";
+import { BrandIdentity } from "@/components/BrandingProvider";
 
 export default async function EducatorAssessmentPage({
   params,
@@ -70,10 +71,7 @@ export default async function EducatorAssessmentPage({
     <main className="min-h-screen bg-brand-background text-brand-text">
       <nav className="border-b border-brand-border bg-brand-surface">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-4">
-          <div>
-            <p className="text-sm font-semibold">Educator workspace</p>
-            <p className="text-xs text-brand-muted">Signed in as {educator.name}</p>
-          </div>
+          <BrandIdentity subtitle={`Educator workspace · ${educator.name}`} />
           <div className="flex items-center gap-3">
             <Link href="/educator" className="focus-ring rounded-lg border border-brand-border px-3 py-2 text-sm font-semibold hover:bg-brand-background">
               Back to assessments
