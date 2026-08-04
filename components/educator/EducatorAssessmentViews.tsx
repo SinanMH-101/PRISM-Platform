@@ -2,25 +2,36 @@
 
 import { ReactNode, useState } from "react";
 
+type AssessmentView = "dashboard" | "groups" | "groupView";
+
 export default function EducatorAssessmentViews({
   dashboard,
   sidebar,
   groupManager,
   groupView,
+  initialView,
 }: {
   dashboard: ReactNode;
   sidebar: ReactNode;
   groupManager: ReactNode;
   groupView: ReactNode;
+  initialView: AssessmentView;
 }) {
-  const [view, setView] = useState<"dashboard" | "groups" | "groupView">("groups");
+  const [view, setView] = useState<AssessmentView>(initialView);
+
+  function selectView(nextView: AssessmentView) {
+    setView(nextView);
+    const url = new URL(window.location.href);
+    url.searchParams.set("view", nextView);
+    window.history.replaceState(window.history.state, "", url);
+  }
 
   return (
     <section className="mx-auto max-w-7xl px-5 py-7">
       <div className="mb-7 flex gap-2 rounded-xl border border-brand-border bg-brand-surface p-1.5 shadow-soft sm:w-fit" role="tablist" aria-label="Assessment views">
-        <ViewButton active={view === "groups"} onClick={() => setView("groups")} label="Manage groups" />
-        <ViewButton active={view === "groupView"} onClick={() => setView("groupView")} label="Group view" />
-        <ViewButton active={view === "dashboard"} onClick={() => setView("dashboard")} label="Dashboard" />
+        <ViewButton active={view === "groups"} onClick={() => selectView("groups")} label="Manage groups" />
+        <ViewButton active={view === "groupView"} onClick={() => selectView("groupView")} label="Group view" />
+        <ViewButton active={view === "dashboard"} onClick={() => selectView("dashboard")} label="Dashboard" />
       </div>
 
       <div role="tabpanel" aria-label={view === "dashboard" ? "Dashboard" : "Manage groups"}>

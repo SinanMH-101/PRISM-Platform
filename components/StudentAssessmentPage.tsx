@@ -17,6 +17,7 @@ export type StudentAssessmentData = {
     due: string;
     status: "OPEN" | "UPCOMING" | "LOCKED" | "SUBMITTED";
     scores: Record<string, number> | null;
+    scoreOverrides: Record<string, boolean> | null;
     feedback: Record<string, string> | null;
   }[];
 };
@@ -65,6 +66,7 @@ export default function StudentAssessmentPage({ data }: { data: StudentAssessmen
 
   const isLocked = week.status !== "OPEN";
   const allocations = handlesToAllocations(handles);
+  const hasEducatorOverrides = Object.values(week.scoreOverrides ?? {}).some(Boolean);
   const currentStudentMember = data.members.find((member) => member.id === data.currentStudent.id);
   const teammateMembers = data.members.filter((member) => member.id !== data.currentStudent.id);
 
@@ -167,8 +169,9 @@ export default function StudentAssessmentPage({ data }: { data: StudentAssessmen
               <div className={`rounded-full px-4 py-2 text-sm font-semibold ${isLocked ? "bg-slate-100 text-slate-600" : "bg-emerald-50 text-emerald-700"}`}>{statusDescription(week.status)}</div>
             </div>
             <div className="mt-8">
+              {hasEducatorOverrides && <div className="mb-5 flex gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800"><span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-amber-500 font-bold text-white">!</span><p><span className="font-bold">Scores adjusted by your educator.</span> An exclamation mark identifies each updated contribution score.</p></div>}
               <div ref={trackRef} className="segment-slider relative h-16 rounded-2xl border border-brand-border bg-brand-background p-2">
-                <div className="flex h-full overflow-hidden rounded-xl">{allocations.map((allocation, index) => <div key={data.members[index].id} className="flex min-w-[2px] items-center justify-center text-xs font-bold text-white" style={{ width: `${allocation}%`, backgroundColor: colours[index % colours.length] }} title={`${data.members[index].name}: ${allocation} points`}>{allocation >= 7 ? allocation : ""}</div>)}</div>
+                <div className="flex h-full overflow-hidden rounded-xl">{allocations.map((allocation, index) => <div key={data.members[index].id} className="flex min-w-[2px] items-center justify-center text-xs font-bold text-white" style={{ width: `${allocation}%`, backgroundColor: colours[index % colours.length] }} title={`${data.members[index].name}: ${allocation} points${week.scoreOverrides?.[data.members[index].id] ? " (adjusted by educator)" : ""}`}>{allocation >= 7 ? <>{allocation}{week.scoreOverrides?.[data.members[index].id] && <span className="ml-0.5">!</span>}</> : ""}</div>)}</div>
                 {handles.map((handle, index) => <button key={index} aria-label={`Move divider ${index + 1}`} disabled={isLocked} onPointerDown={(event) => startDrag(event, index)} onPointerMove={(event) => event.buttons === 1 && updateHandle(index, event.clientX)} className="absolute top-1/2 h-12 w-5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-brand-primary shadow-lg disabled:cursor-not-allowed disabled:opacity-40" style={{ left: `${handle}%` }} />)}
               </div>
             </div>
@@ -176,7 +179,7 @@ export default function StudentAssessmentPage({ data }: { data: StudentAssessmen
 
           <section className="rounded-2xl border border-brand-border bg-brand-surface p-6 shadow-soft">
             <h3 className="text-xl font-bold">Contribution table</h3>
-            <div className="mt-5 overflow-x-auto rounded-xl border border-brand-border"><table className="w-full min-w-[640px] border-collapse text-left text-sm"><thead className="bg-brand-background text-brand-muted"><tr><th className="px-4 py-3">Student</th><th className="px-4 py-3">Email</th><th className="px-4 py-3">Points</th><th className="px-4 py-3">Share</th></tr></thead><tbody className="divide-y divide-brand-border bg-white">{data.members.map((member, index) => <tr key={member.id}><td className="px-4 py-4"><div className="flex items-center gap-3"><div className="flex h-9 w-9 items-center justify-center rounded-full text-xs font-bold text-white" style={{ backgroundColor: colours[index % colours.length] }}>{member.initials}</div><span className="font-semibold">{member.name}{member.id === data.currentStudent.id ? " (you)" : ""}</span></div></td><td className="px-4 py-4 text-brand-muted">{member.email}</td><td className="px-4 py-4 font-bold">{allocations[index]}</td><td className="px-4 py-4 text-brand-muted">{allocations[index]}%</td></tr>)}</tbody></table></div>
+            <div className="mt-5 overflow-x-auto rounded-xl border border-brand-border"><table className="w-full min-w-[640px] border-collapse text-left text-sm"><thead className="bg-brand-background text-brand-muted"><tr><th className="px-4 py-3">Student</th><th className="px-4 py-3">Email</th><th className="px-4 py-3">Points</th><th className="px-4 py-3">Share</th></tr></thead><tbody className="divide-y divide-brand-border bg-white">{data.members.map((member, index) => <tr key={member.id}><td className="px-4 py-4"><div className="flex items-center gap-3"><div className="flex h-9 w-9 items-center justify-center rounded-full text-xs font-bold text-white" style={{ backgroundColor: colours[index % colours.length] }}>{member.initials}</div><span className="font-semibold">{member.name}{member.id === data.currentStudent.id ? " (you)" : ""}</span></div></td><td className="px-4 py-4 text-brand-muted">{member.email}</td><td className="px-4 py-4 font-bold">{allocations[index]}{week.scoreOverrides?.[member.id] && <span className="ml-1 text-amber-600" title="Adjusted by educator">!</span>}</td><td className="px-4 py-4 text-brand-muted">{allocations[index]}%{week.scoreOverrides?.[member.id] && <span className="ml-1 font-bold text-amber-600" title="Adjusted by educator">!</span>}</td></tr>)}</tbody></table></div>
           </section>
 
           <section className="rounded-2xl border border-brand-border bg-brand-surface p-6 shadow-soft">

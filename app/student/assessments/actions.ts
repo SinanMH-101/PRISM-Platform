@@ -35,15 +35,39 @@ export async function submitStudentAssessment(input: SubmissionInput): Promise<{
   if (input.feedback.some((item) => item.comment.length > 2000)) return { ok: false, error: "Each feedback response must be 2,000 characters or fewer." };
 
   try {
-    await prisma.submission.create({
-      data: {
-        assessmentWeekId: week.id,
-        groupId: membership.groupId,
-        submittedByStudentId: student.id,
-        scores: { create: input.scores.map((score) => ({ targetStudentId: score.studentId, points: score.points })) },
-        feedback: { create: input.feedback.map((item) => ({ fromStudentId: student.id, toStudentId: item.studentId, comment: item.comment })) },
-      },
+    const existingSubmission = await prisma.submission.findUnique({
+      where: { assessmentWeekId_groupId_submittedByStudentId: { assessmentWeekId: week.id, groupId: membership.groupId, submittedByStudentId: student.id } },
+      include: { scores: true },
     });
+    const existingScoreIds = existingSubmission?.scores.map((score) => score.targetStudentId).sort() ?? [];
+    const existingTotal = existingSubmission?.scores.reduce((sum, score) => sum + (score.educatorOverridePoints ?? score.points), 0) ?? 0;
+    const existingComplete = Boolean(existingSubmission) && memberIds.length === existingScoreIds.length && memberIds.every((id, index) => id === existingScoreIds[index]) && existingTotal === 100;
+    if (existingComplete) return { ok: false, error: "You have already submitted this week." };
+
+    if (existingSubmission) {
+      await prisma.$transaction([
+        prisma.feedback.deleteMany({ where: { submissionId: existingSubmission.id } }),
+        prisma.contributionScore.deleteMany({ where: { submissionId: existingSubmission.id } }),
+        prisma.submission.update({
+          where: { id: existingSubmission.id },
+          data: {
+            submittedAt: new Date(),
+            scores: { create: input.scores.map((score) => ({ targetStudentId: score.studentId, points: score.points })) },
+            feedback: { create: input.feedback.map((item) => ({ fromStudentId: student.id, toStudentId: item.studentId, comment: item.comment })) },
+          },
+        }),
+      ]);
+    } else {
+      await prisma.submission.create({
+        data: {
+          assessmentWeekId: week.id,
+          groupId: membership.groupId,
+          submittedByStudentId: student.id,
+          scores: { create: input.scores.map((score) => ({ targetStudentId: score.studentId, points: score.points })) },
+          feedback: { create: input.feedback.map((item) => ({ fromStudentId: student.id, toStudentId: item.studentId, comment: item.comment })) },
+        },
+      });
+    }
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") return { ok: false, error: "You have already submitted this week." };
     console.error("Student submission failed", error);
@@ -51,5 +75,6 @@ export async function submitStudentAssessment(input: SubmissionInput): Promise<{
   }
 
   revalidatePath(`/student/assessments/${input.assessmentId}`);
+  revalidatePath(`/educator/assessments/${input.assessmentId}`);
   return { ok: true };
 }

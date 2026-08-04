@@ -6,12 +6,21 @@ import GroupManager from "@/components/educator/GroupManager";
 import EducatorProgressDashboard from "@/components/educator/EducatorProgressDashboard";
 import EducatorAssessmentViews from "@/components/educator/EducatorAssessmentViews";
 import GroupSubmissionView from "@/components/educator/GroupSubmissionView";
+import { educatorLogoutAction } from "../../actions";
 
-export default async function EducatorAssessmentPage({ params }: { params: Promise<{ assessmentId: string }> }) {
+export default async function EducatorAssessmentPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ assessmentId: string }>;
+  searchParams: Promise<{ view?: string | string[] }>;
+}) {
   const educator = await requireEducator();
   if (educator.mustChangePassword) redirect("/change-password");
 
   const { assessmentId } = await params;
+  const requestedView = (await searchParams).view;
+  const initialView = requestedView === "dashboard" || requestedView === "groupView" || requestedView === "groups" ? requestedView : "groups";
   const invite = await prisma.assessmentEducator.findFirst({
     where: {
       assessmentId,
@@ -65,13 +74,19 @@ export default async function EducatorAssessmentPage({ params }: { params: Promi
             <p className="text-sm font-semibold">Educator workspace</p>
             <p className="text-xs text-brand-muted">Signed in as {educator.name}</p>
           </div>
-          <Link href="/educator" className="focus-ring rounded-lg border border-brand-border px-3 py-2 text-sm font-semibold hover:bg-brand-background">
-            Back to assessments
-          </Link>
+          <div className="flex items-center gap-3">
+            <Link href="/educator" className="focus-ring rounded-lg border border-brand-border px-3 py-2 text-sm font-semibold hover:bg-brand-background">
+              Back to assessments
+            </Link>
+            <form action={educatorLogoutAction}>
+              <button className="focus-ring rounded-lg border border-brand-border px-3 py-2 text-sm font-semibold hover:bg-brand-background">Log out</button>
+            </form>
+          </div>
         </div>
       </nav>
 
       <EducatorAssessmentViews
+        initialView={initialView}
         sidebar={
           <section className="rounded-lg border border-brand-border bg-brand-surface p-5 shadow-soft">
             <p className="text-sm font-semibold text-brand-primary">{assessment.unitCode}</p>
@@ -108,6 +123,7 @@ export default async function EducatorAssessmentPage({ params }: { params: Promi
         }
         groupView={
           <GroupSubmissionView
+            assessmentId={assessment.id}
             weekNumbers={assessment.weeks.map((week) => week.weekNumber)}
             groups={groups.map((group) => ({
               id: group.id,
@@ -119,7 +135,13 @@ export default async function EducatorAssessmentPage({ params }: { params: Promi
                 weekNumber: submission.assessmentWeek.weekNumber,
                 submittedAt: submission.submittedAt.toISOString(),
                 submittedBy: submission.submittedBy,
-                scores: submission.scores.map((score) => ({ targetStudentId: score.targetStudentId, targetStudentName: score.targetStudent.name, points: score.points })),
+                scores: submission.scores.map((score) => ({
+                  targetStudentId: score.targetStudentId,
+                  targetStudentName: score.targetStudent.name,
+                  originalPoints: score.points,
+                  points: score.educatorOverridePoints ?? score.points,
+                  overridden: score.educatorOverridePoints !== null,
+                })),
                 feedback: submission.feedback.map((item) => ({ toStudentId: item.toStudentId, toStudentName: item.toStudent.name, comment: item.comment })),
               })),
             }))}

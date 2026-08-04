@@ -84,10 +84,11 @@ model Class {
 }
 
 model Group {
-  id         String  @id @default(cuid())
-  name       String
-  classId    String
-  educatorId String?
+  id               String  @id @default(cuid())
+  name             String
+  classId          String
+  educatorId       String?
+  capacityOverride Int?
 
   class       Class         @relation(fields: [classId], references: [id])
   educator    User?         @relation("GroupEducator", fields: [educatorId], references: [id], onDelete: SetNull)
@@ -141,10 +142,12 @@ model Submission {
 }
 
 model ContributionScore {
-  id              String @id @default(cuid())
-  submissionId    String
-  targetStudentId String
-  points          Int
+  id                       String    @id @default(cuid())
+  submissionId             String
+  targetStudentId          String
+  points                   Int
+  educatorOverridePoints   Int?
+  educatorOverriddenAt     DateTime?
 
   submission    Submission @relation(fields: [submissionId], references: [id])
   targetStudent User       @relation(fields: [targetStudentId], references: [id])

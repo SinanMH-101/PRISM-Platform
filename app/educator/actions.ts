@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { requireEducator } from "@/lib/auth";
+import { clearSession, requireEducator } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { hashPassword } from "@/lib/password";
 import { generateTemporaryPassword } from "@/lib/invites";
@@ -17,6 +17,16 @@ export type AddStudentActionState = {
   temporaryPassword?: string;
   accountCreated?: boolean;
 };
+
+export type OverrideScoresActionState = {
+  status: "idle" | "error" | "success";
+  message?: string;
+};
+
+export async function educatorLogoutAction() {
+  await clearSession();
+  redirect("/login");
+}
 
 export async function joinAssessmentAction(formData: FormData) {
   const user = await requireEducator();
@@ -76,6 +86,95 @@ export async function createGroupAction(formData: FormData) {
   revalidatePath(`/educator/assessments/${assessmentId}`);
 }
 
+export async function updateGroupCapacityAction(formData: FormData) {
+  const educator = await requireEducator();
+  const assessmentId = String(formData.get("assessmentId") ?? "");
+  const groupId = String(formData.get("groupId") ?? "");
+  const capacityValue = formData.get("resetCapacity") === "true"
+    ? ""
+    : String(formData.get("capacity") ?? "").trim();
+
+  const [invite, group] = await Promise.all([
+    prisma.assessmentEducator.findFirst({
+      where: { assessmentId, userId: educator.id, status: "JOINED", removedAt: null },
+      select: { id: true, assessment: { select: { studentsPerGroup: true } } },
+    }),
+    prisma.group.findFirst({
+      where: { id: groupId, class: { assessmentId } },
+      select: { id: true, _count: { select: { members: true } } },
+    }),
+  ]);
+
+  if (!invite || !group) return;
+
+  const capacity = capacityValue === "" ? null : Number(capacityValue);
+  if (capacity !== null && (!Number.isInteger(capacity) || capacity < group._count.members || capacity > 100)) return;
+  if (capacity === null && group._count.members > invite.assessment.studentsPerGroup) return;
+
+  await prisma.group.update({
+    where: { id: group.id },
+    data: { capacityOverride: capacity },
+  });
+
+  revalidatePath(`/educator/assessments/${assessmentId}`);
+}
+
+export async function overrideContributionScoresAction(
+  _previousState: OverrideScoresActionState,
+  formData: FormData
+): Promise<OverrideScoresActionState> {
+  const educator = await requireEducator();
+  const assessmentId = String(formData.get("assessmentId") ?? "");
+  const submissionId = String(formData.get("submissionId") ?? "");
+  const reset = formData.get("reset") === "true";
+
+  const submission = await prisma.submission.findFirst({
+    where: {
+      id: submissionId,
+      group: { class: { assessmentId } },
+      assessmentWeek: { assessmentId, assessment: { educators: { some: { userId: educator.id, status: "JOINED", removedAt: null } } } },
+    },
+    include: { scores: true, group: { include: { members: { select: { studentId: true } } } } },
+  });
+
+  if (!submission) return { status: "error", message: "Submission not found or access was denied." };
+
+  if (reset) {
+    await prisma.contributionScore.updateMany({
+      where: { submissionId },
+      data: { educatorOverridePoints: null, educatorOverriddenAt: null },
+    });
+    revalidatePath(`/educator/assessments/${assessmentId}`);
+    revalidatePath(`/student/assessments/${assessmentId}`);
+    return { status: "success", message: "The student's original allocation has been restored." };
+  }
+
+  const memberIds = submission.group.members.map((member) => member.studentId).sort();
+  const scoreIds = submission.scores.map((score) => score.targetStudentId).sort();
+  if (memberIds.join("|") !== scoreIds.join("|")) return { status: "error", message: "The submission scores do not match the current group members." };
+
+  const overrides = submission.scores.map((score) => ({
+    id: score.id,
+    originalPoints: score.points,
+    points: Number(formData.get(`score:${score.targetStudentId}`)),
+  }));
+  if (overrides.some((score) => !Number.isInteger(score.points) || score.points < 0 || score.points > 100) || overrides.reduce((sum, score) => sum + score.points, 0) !== 100) {
+    return { status: "error", message: "Adjusted scores must be whole numbers totalling exactly 100." };
+  }
+
+  const overriddenAt = new Date();
+  await prisma.$transaction(overrides.map((score) => prisma.contributionScore.update({
+    where: { id: score.id },
+    data: score.points === score.originalPoints
+      ? { educatorOverridePoints: null, educatorOverriddenAt: null }
+      : { educatorOverridePoints: score.points, educatorOverriddenAt: overriddenAt },
+  })));
+
+  revalidatePath(`/educator/assessments/${assessmentId}`);
+  revalidatePath(`/student/assessments/${assessmentId}`);
+  return { status: "success", message: "Adjusted scores saved. Students will see them marked as educator overrides." };
+}
+
 export async function addStudentAction(
   _previousState: AddStudentActionState,
   formData: FormData
@@ -100,7 +199,8 @@ export async function addStudentAction(
   if (!name || !studentId || !emailPattern.test(email)) {
     return { status: "error", message: "Enter a name, student ID, and valid email address." };
   }
-  if (group._count.members >= invite.assessment.studentsPerGroup) {
+  const groupCapacity = group.capacityOverride ?? invite.assessment.studentsPerGroup;
+  if (group._count.members >= groupCapacity) {
     return { status: "error", message: "This group is already full." };
   }
 
@@ -180,4 +280,57 @@ export async function deleteGroupAction(formData: FormData) {
   ]);
 
   revalidatePath(`/educator/assessments/${assessmentId}`);
+}
+
+export async function removeStudentFromGroupAction(formData: FormData) {
+  const educator = await requireEducator();
+  const assessmentId = String(formData.get("assessmentId") ?? "");
+  const groupId = String(formData.get("groupId") ?? "");
+  const membershipId = String(formData.get("membershipId") ?? "");
+
+  const [invite, membership] = await Promise.all([
+    prisma.assessmentEducator.findFirst({
+      where: { assessmentId, userId: educator.id, status: "JOINED", removedAt: null },
+      select: { id: true },
+    }),
+    prisma.groupMember.findFirst({
+      where: { id: membershipId, groupId, group: { class: { assessmentId } } },
+      select: { id: true, studentId: true },
+    }),
+  ]);
+
+  if (!invite || !membership) return;
+
+  const removedSubmissions = await prisma.submission.findMany({
+    where: { groupId, submittedByStudentId: membership.studentId },
+    select: { id: true },
+  });
+  const removedSubmissionIds = removedSubmissions.map((submission) => submission.id);
+
+  await prisma.$transaction([
+    prisma.feedback.deleteMany({
+      where: {
+        submission: { groupId },
+        OR: [
+          { fromStudentId: membership.studentId },
+          { toStudentId: membership.studentId },
+          { submissionId: { in: removedSubmissionIds } },
+        ],
+      },
+    }),
+    prisma.contributionScore.deleteMany({
+      where: {
+        OR: [
+          { targetStudentId: membership.studentId, submission: { groupId } },
+          { submissionId: { in: removedSubmissionIds } },
+        ],
+      },
+    }),
+    prisma.submission.deleteMany({ where: { id: { in: removedSubmissionIds } } }),
+    prisma.groupMember.delete({ where: { id: membership.id } }),
+  ]);
+
+  revalidatePath(`/educator/assessments/${assessmentId}`);
+  revalidatePath(`/student/assessments/${assessmentId}`);
+  revalidatePath("/student/dashboard");
 }

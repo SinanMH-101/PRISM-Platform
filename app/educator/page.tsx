@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { requireEducator } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { joinAssessmentAction } from "./actions";
+import { educatorLogoutAction, joinAssessmentAction } from "./actions";
 
 export default async function EducatorPage() {
   const user = await requireEducator();
@@ -22,6 +22,9 @@ export default async function EducatorPage() {
             <p className="text-sm font-semibold">Educator workspace</p>
             <p className="text-xs text-brand-muted">Signed in as {user.name}</p>
           </div>
+          <form action={educatorLogoutAction}>
+            <button className="focus-ring rounded-lg border border-brand-border px-3 py-2 text-sm font-semibold hover:bg-brand-background">Log out</button>
+          </form>
         </div>
       </nav>
       <section className="mx-auto max-w-5xl space-y-5 px-5 py-7">

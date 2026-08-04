@@ -38,13 +38,18 @@ export default async function StudentAssessmentRoute({ params }: { params: Promi
     members: group.members.map(({ student: member }) => ({ id: member.id, name: member.name, email: member.email, initials: member.name.split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toUpperCase() })),
     weeks: assessment.weeks.map((week) => {
       const submission = submissions.get(week.id);
-      const status = submission ? "SUBMITTED" : week.locked || now > week.dueAt ? "LOCKED" : now < week.opensAt ? "UPCOMING" : "OPEN";
+      const memberIds = group.members.map((member) => member.studentId).sort();
+      const submittedScoreIds = submission?.scores.map((score) => score.targetStudentId).sort() ?? [];
+      const effectiveTotal = submission?.scores.reduce((sum, score) => sum + (score.educatorOverridePoints ?? score.points), 0) ?? 0;
+      const submissionComplete = Boolean(submission) && memberIds.length === submittedScoreIds.length && memberIds.every((id, index) => id === submittedScoreIds[index]) && effectiveTotal === 100;
+      const status = submissionComplete ? "SUBMITTED" : week.locked || now > week.dueAt ? "LOCKED" : now < week.opensAt ? "UPCOMING" : "OPEN";
       return {
         id: week.id,
         number: week.weekNumber,
         due: formatter.format(week.dueAt),
         status,
-        scores: submission ? Object.fromEntries(submission.scores.map((score) => [score.targetStudentId, score.points])) : null,
+        scores: submission ? Object.fromEntries(submission.scores.map((score) => [score.targetStudentId, score.educatorOverridePoints ?? score.points])) : null,
+        scoreOverrides: submission ? Object.fromEntries(submission.scores.map((score) => [score.targetStudentId, score.educatorOverridePoints !== null])) : null,
         feedback: submission ? Object.fromEntries(submission.feedback.map((item) => [item.toStudentId, item.comment])) : null,
       };
     }),

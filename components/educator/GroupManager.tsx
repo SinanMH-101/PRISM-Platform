@@ -1,13 +1,23 @@
 "use client";
 
 import { useActionState, useEffect, useState } from "react";
-import { addStudentAction, createGroupAction, deleteGroupAction, type AddStudentActionState } from "@/app/educator/actions";
+import { useRouter } from "next/navigation";
+import { addStudentAction, createGroupAction, deleteGroupAction, removeStudentFromGroupAction, updateGroupCapacityAction, type AddStudentActionState } from "@/app/educator/actions";
 
 type Group = {
   id: string;
   name: string;
   className: string;
-  members: { id: string; student: { name: string; email: string; studentId: string | null } }[];
+  capacityOverride: number | null;
+  members: {
+    id: string;
+    student: {
+      name: string;
+      email: string;
+      studentId: string | null;
+      mustChangePassword: boolean;
+    };
+  }[];
 };
 
 function PlusIcon() {
@@ -19,8 +29,10 @@ function TrashIcon() {
 }
 
 export default function GroupManager({ assessmentId, studentsPerGroup, groups }: { assessmentId: string; studentsPerGroup: number; groups: Group[] }) {
+  const router = useRouter();
   const [creatingGroup, setCreatingGroup] = useState(false);
   const [addingTo, setAddingTo] = useState<Group | null>(null);
+  const [editingCapacity, setEditingCapacity] = useState<Group | null>(null);
   const [credentials, setCredentials] = useState<AddStudentActionState | null>(null);
   const [studentState, studentAction, studentPending] = useActionState(addStudentAction, { status: "idle" } as AddStudentActionState);
 
@@ -30,6 +42,19 @@ export default function GroupManager({ assessmentId, studentsPerGroup, groups }:
       setCredentials(studentState);
     }
   }, [studentState]);
+
+  useEffect(() => {
+    const hasInvitedStudents = groups.some((group) =>
+      group.members.some((member) => member.student.mustChangePassword)
+    );
+    if (!hasInvitedStudents) return;
+
+    const interval = window.setInterval(() => {
+      if (document.visibilityState === "visible") router.refresh();
+    }, 10_000);
+
+    return () => window.clearInterval(interval);
+  }, [groups, router]);
 
   return (
     <section className="mx-auto w-full max-w-3xl">
@@ -63,9 +88,15 @@ export default function GroupManager({ assessmentId, studentsPerGroup, groups }:
                 <span aria-hidden="true" className="text-brand-muted transition-transform group-open:rotate-90">›</span>
                 <div className="min-w-0 flex-1">
                   <h3 className="truncate font-bold">{group.name}</h3>
-                  <p className="text-xs text-brand-muted">{group.members.length}/{studentsPerGroup} students</p>
+                  <p className="text-xs text-brand-muted">
+                    {group.members.length}/{group.capacityOverride ?? studentsPerGroup} students
+                    {group.capacityOverride !== null && " · Custom capacity"}
+                  </p>
                 </div>
-                <button type="button" aria-label={`Add student to ${group.name}`} disabled={group.members.length >= studentsPerGroup} onClick={(event) => { event.preventDefault(); setAddingTo(group); }} className="focus-ring rounded-lg border border-brand-border p-2 text-brand-primary hover:bg-brand-background disabled:cursor-not-allowed disabled:opacity-40">
+                <button type="button" onClick={(event) => { event.preventDefault(); setEditingCapacity(group); }} className="focus-ring rounded-lg border border-brand-border px-3 py-2 text-xs font-semibold text-brand-primary hover:bg-brand-background">
+                  Capacity
+                </button>
+                <button type="button" aria-label={`Add student to ${group.name}`} disabled={group.members.length >= (group.capacityOverride ?? studentsPerGroup)} onClick={(event) => { event.preventDefault(); setAddingTo(group); }} className="focus-ring rounded-lg border border-brand-border p-2 text-brand-primary hover:bg-brand-background disabled:cursor-not-allowed disabled:opacity-40">
                   <PlusIcon />
                 </button>
                 <form action={deleteGroupAction} onSubmit={(event) => { if (!window.confirm(`Delete ${group.name}? Its student memberships will also be removed.`)) event.preventDefault(); }}>
@@ -78,10 +109,28 @@ export default function GroupManager({ assessmentId, studentsPerGroup, groups }:
                 {group.members.length === 0 ? <p className="text-sm text-brand-muted">No students in this group yet.</p> : (
                   <div className="divide-y divide-brand-border">
                     {group.members.map((member) => (
-                      <div key={member.id} className="grid gap-1 py-3 sm:grid-cols-[1fr_auto] sm:items-center sm:gap-x-6">
-                        <span className="font-semibold">{member.student.name}</span>
-                        <span className="text-sm font-medium text-brand-muted">ID: {member.student.studentId ?? "Not provided"}</span>
-                        <span className="text-sm text-brand-muted sm:col-span-2">{member.student.email}</span>
+                      <div key={member.id} className="grid gap-1 py-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:gap-x-6">
+                        <div className="min-w-0">
+                          <span className="font-semibold">{member.student.name}</span>
+                          <span className="mt-1 block truncate text-sm text-brand-muted">{member.student.email}</span>
+                        </div>
+                        <div className="mt-2 flex items-center gap-3 sm:mt-0 sm:justify-end">
+                          <span className="text-sm font-medium text-brand-muted">ID: {member.student.studentId ?? "Not provided"}</span>
+                          <StudentStatus invited={member.student.mustChangePassword} />
+                          <form
+                            action={removeStudentFromGroupAction}
+                            onSubmit={(event) => {
+                              if (!window.confirm(`Remove ${member.student.name} from ${group.name}? Their account will be kept, but their submissions, point allocations, and group feedback will be removed.`)) event.preventDefault();
+                            }}
+                          >
+                            <input type="hidden" name="assessmentId" value={assessmentId} />
+                            <input type="hidden" name="groupId" value={group.id} />
+                            <input type="hidden" name="membershipId" value={member.id} />
+                            <button type="submit" aria-label={`Remove ${member.student.name} from ${group.name}`} title="Remove student from group" className="focus-ring rounded-lg border border-red-200 p-2 text-red-600 hover:bg-red-50">
+                              <TrashIcon />
+                            </button>
+                          </form>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -116,6 +165,38 @@ export default function GroupManager({ assessmentId, studentsPerGroup, groups }:
         </Modal>
       )}
 
+      {editingCapacity && (
+        <Modal title={`Set capacity for ${editingCapacity.name}`} onClose={() => setEditingCapacity(null)}>
+          <form action={updateGroupCapacityAction} onSubmit={() => setEditingCapacity(null)} className="space-y-5">
+            <input type="hidden" name="assessmentId" value={assessmentId} />
+            <input type="hidden" name="groupId" value={editingCapacity.id} />
+            <label className="block text-sm font-semibold">
+              Maximum students
+              <input
+                autoFocus
+                name="capacity"
+                type="number"
+                min={Math.max(1, editingCapacity.members.length)}
+                max={100}
+                defaultValue={editingCapacity.capacityOverride ?? studentsPerGroup}
+                required
+                className="focus-ring mt-2 h-11 w-full rounded-lg border border-brand-border px-3 font-normal"
+              />
+            </label>
+            <p className="text-sm text-brand-muted">The assessment default is {studentsPerGroup}. This group currently has {editingCapacity.members.length} students.</p>
+            <div className="flex flex-wrap justify-end gap-3 pt-1">
+              {editingCapacity.capacityOverride !== null && (
+                <button type="submit" name="resetCapacity" value="true" formNoValidate disabled={editingCapacity.members.length > studentsPerGroup} title={editingCapacity.members.length > studentsPerGroup ? `Remove students before returning to the default capacity of ${studentsPerGroup}.` : undefined} className="focus-ring mr-auto rounded-lg border border-brand-border px-4 py-2.5 text-sm font-semibold text-brand-primary hover:bg-brand-background disabled:cursor-not-allowed disabled:opacity-40">
+                  Use default ({studentsPerGroup})
+                </button>
+              )}
+              <button type="button" onClick={() => setEditingCapacity(null)} className="focus-ring rounded-lg border border-brand-border px-4 py-2.5 text-sm font-semibold">Cancel</button>
+              <button className="focus-ring rounded-lg bg-brand-primary px-4 py-2.5 text-sm font-semibold text-white hover:opacity-90">Save capacity</button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
       {credentials?.status === "success" && (
         <Modal title={credentials.accountCreated ? "Student account created" : "Existing student account found"} onClose={() => setCredentials(null)}>
           <div className="space-y-4">
@@ -135,6 +216,20 @@ export default function GroupManager({ assessmentId, studentsPerGroup, groups }:
         </Modal>
       )}
     </section>
+  );
+}
+
+function StudentStatus({ invited }: { invited: boolean }) {
+  return (
+    <span
+      className={`inline-flex shrink-0 items-center rounded-full border px-2.5 py-1 text-xs font-bold ${
+        invited
+          ? "border-amber-200 bg-amber-50 text-amber-700"
+          : "border-emerald-200 bg-emerald-50 text-emerald-700"
+      }`}
+    >
+      {invited ? "Invited" : "Joined"}
+    </span>
   );
 }
 
