@@ -1,7 +1,9 @@
 {
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "prisma generate --generator client && next build",
+    "postinstall": "prisma generate --generator client",
+    "db:migrate": "prisma migrate deploy",
     "start": "next start",
     "seed:admin": "node scripts/seed-admin.mjs",
     "lint": "next lint"
