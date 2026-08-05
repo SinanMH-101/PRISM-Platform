@@ -12,9 +12,9 @@ export default async function ChangePasswordPage() {
       <section className="w-full max-w-md rounded-lg border border-brand-border bg-brand-surface p-6 shadow-soft">
         <div className="mb-5"><BrandIdentity subtitle="Team assessment platform" /></div>
         <p className="text-sm font-semibold text-brand-primary">Account setup</p>
-        <h1 className="mt-1 text-3xl font-bold">Change password</h1>
-        <p className="mt-2 text-sm text-brand-muted">Set your own password before continuing.</p>
-        <ChangePasswordForm />
+        <h1 className="mt-1 text-3xl font-bold">Complete your account</h1>
+        <p className="mt-2 text-sm text-brand-muted">Confirm your name and set your own password before continuing.</p>
+        <ChangePasswordForm defaultName={user.name} />
       </section>
     </main>
   );

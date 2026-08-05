@@ -59,6 +59,11 @@ export async function getCurrentUser() {
     return null;
   }
 
+  if (session.user.deletedAt) {
+    await prisma.session.delete({ where: { id: session.id } });
+    return null;
+  }
+
   return session.user;
 }
 
@@ -101,6 +106,7 @@ export function getRoleHomePath(role: "ADMIN" | "EDUCATOR" | "STUDENT") {
 export async function authenticate(username: string, password: string) {
   const user = await prisma.user.findFirst({
     where: {
+      deletedAt: null,
       OR: [{ username }, { email: username.toLowerCase() }],
     },
   });

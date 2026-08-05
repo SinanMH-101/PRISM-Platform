@@ -26,6 +26,7 @@ model User {
   mustChangePassword Boolean  @default(false)
   role               Role
   createdAt          DateTime @default(now())
+  deletedAt          DateTime?
 
   groupMemberships    GroupMember[]
   sessions            Session[]

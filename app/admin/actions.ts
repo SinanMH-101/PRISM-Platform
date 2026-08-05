@@ -10,8 +10,26 @@ import { inviteEducatorsToAssessment, isValidEmail, splitEducatorEmails, type In
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 export type EducatorInviteActionState = {
   error?: string;
+  message?: string;
   previews: InviteEmailPreview[];
 };
+
+function inviteActionState(result: Awaited<ReturnType<typeof inviteEducatorsToAssessment>>): EducatorInviteActionState {
+  if (result.failed.length > 0) {
+    return {
+      error: `${result.failed.length} invitation${result.failed.length === 1 ? "" : "s"} could not be sent. ${result.failed[0].error}`,
+      previews: result.previews,
+    };
+  }
+
+  return {
+    message:
+      result.deliveryMode === "brevo"
+        ? `${result.sent} invitation${result.sent === 1 ? "" : "s"} sent through Brevo.`
+        : "Brevo is not configured, so no email was sent. Preview mode is active.",
+    previews: result.previews,
+  };
+}
 
 function enumValue(value: FormDataEntryValue | null) {
   return String(value ?? "").trim().toUpperCase().replaceAll("-", "_");
@@ -196,7 +214,7 @@ export async function invitePastedEducatorsAction(_previousState: EducatorInvite
 
   const result = await inviteEducatorsToAssessment(assessmentId, emails);
   revalidatePath(`/admin/assessments/${assessmentId}/educators`);
-  return { previews: result.previews };
+  return inviteActionState(result);
 }
 
 export async function uploadEducatorCsvAction(_previousState: EducatorInviteActionState, formData: FormData): Promise<EducatorInviteActionState> {
@@ -212,7 +230,7 @@ export async function uploadEducatorCsvAction(_previousState: EducatorInviteActi
 
   const result = await inviteEducatorsToAssessment(assessmentId, emails);
   revalidatePath(`/admin/assessments/${assessmentId}/educators`);
-  return { previews: result.previews };
+  return inviteActionState(result);
 }
 
 export async function createEducatorAccountAction(_previousState: EducatorInviteActionState, formData: FormData): Promise<EducatorInviteActionState> {
@@ -248,7 +266,7 @@ export async function createEducatorAccountAction(_previousState: EducatorInvite
 
   revalidatePath(`/admin/assessments/${assessmentId}/educators`);
   const result = await inviteEducatorsToAssessment(assessmentId, [email]);
-  return { previews: result.previews };
+  return inviteActionState(result);
 }
 
 export async function removeEducatorAction(formData: FormData) {
@@ -268,7 +286,7 @@ export async function resendEducatorInviteAction(_previousState: EducatorInviteA
 
   const result = await inviteEducatorsToAssessment(assessmentId, [educator.email]);
   revalidatePath(`/admin/assessments/${assessmentId}/educators`);
-  return { previews: result.previews };
+  return inviteActionState(result);
 }
 
 export async function saveSettingsAction(formData: FormData) {

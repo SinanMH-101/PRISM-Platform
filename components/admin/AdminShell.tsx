@@ -58,6 +58,9 @@ export default function AdminShell({
             <Link href="/admin/settings" className="focus-ring rounded-lg border border-brand-border px-3 py-2 font-semibold hover:bg-brand-background">
               Settings
             </Link>
+            <Link href="/admin/accounts" className="focus-ring rounded-lg border border-brand-border px-3 py-2 font-semibold hover:bg-brand-background">
+              Accounts
+            </Link>
             <form action={logoutAction}>
               <button className="focus-ring rounded-lg border border-brand-border px-3 py-2 font-semibold hover:bg-brand-background">Log out</button>
             </form>

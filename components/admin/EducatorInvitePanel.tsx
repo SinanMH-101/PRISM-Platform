@@ -45,6 +45,7 @@ export default function EducatorInvitePanel({ assessmentId, educators }: { asses
   }, [router]);
 
   const error = pastedState.error ?? manualState.error ?? resendState.error;
+  const message = pastedState.message ?? manualState.message ?? resendState.message;
 
   return (
     <div className="space-y-6">
@@ -53,6 +54,7 @@ export default function EducatorInvitePanel({ assessmentId, educators }: { asses
       <section className="rounded-lg border border-brand-border bg-brand-surface p-5 shadow-soft">
         <h2 className="text-xl font-bold">Add educators</h2>
         {error && <p className="mt-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-semibold text-red-700">{error}</p>}
+        {!error && message && <p className="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-700">{message}</p>}
 
         <form action={pastedAction} className="mt-5 grid gap-4">
           <input type="hidden" name="assessmentId" value={assessmentId} />
@@ -66,7 +68,7 @@ export default function EducatorInvitePanel({ assessmentId, educators }: { asses
           </label>
           <div>
             <button disabled={pastedPending} className="focus-ring rounded-lg bg-brand-primary px-4 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-60">
-              {pastedPending ? "Preparing previews..." : "Send pasted invites"}
+              {pastedPending ? "Sending invites..." : "Send pasted invites"}
             </button>
           </div>
         </form>
@@ -96,7 +98,7 @@ export default function EducatorInvitePanel({ assessmentId, educators }: { asses
                 <th className="px-4 py-3 font-semibold">Email</th>
                 <th className="px-4 py-3 font-semibold">Status</th>
                 <th className="px-4 py-3 font-semibold">Invite sent date</th>
-                <th className="px-4 py-3 font-semibold">Last preview</th>
+                <th className="px-4 py-3 font-semibold">Last sent</th>
                 <th className="px-4 py-3 font-semibold">Actions</th>
               </tr>
             </thead>
@@ -165,7 +167,7 @@ function EmailPreviewModal({ previews, onClose }: { previews: InviteEmailPreview
         <div className="flex items-start justify-between gap-4 border-b border-brand-border p-5">
           <div>
             <h2 className="text-xl font-bold">Email preview</h2>
-            <p className="mt-1 text-sm text-brand-muted">Use these details to open another tab and sign in as the educator.</p>
+            <p className="mt-1 text-sm text-brand-muted">Review the invitation and the educator sign-in details.</p>
           </div>
           <button onClick={onClose} className="focus-ring rounded-lg border border-brand-border px-3 py-2 text-sm font-semibold hover:bg-brand-background">
             Close
@@ -178,7 +180,9 @@ function EmailPreviewModal({ previews, onClose }: { previews: InviteEmailPreview
               <p className="mt-1 font-semibold">{preview.to}</p>
               <p className="mt-3 text-xs font-semibold uppercase text-brand-muted">Subject</p>
               <p className="mt-1 font-semibold">{preview.subject}</p>
-              <pre className="mt-4 whitespace-pre-wrap rounded-lg bg-white p-3 text-sm text-brand-text">{preview.body}</pre>
+              <div className="mt-4 overflow-hidden rounded-lg border border-brand-border bg-white">
+                <div dangerouslySetInnerHTML={{ __html: preview.htmlBody }} />
+              </div>
               <div className="mt-3 rounded-lg bg-white p-3 text-sm">
                 <p>
                   <span className="font-semibold">Username:</span> {preview.username}
