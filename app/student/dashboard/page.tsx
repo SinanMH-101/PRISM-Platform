@@ -66,7 +66,7 @@ export default async function StudentDashboardPage() {
         {assessments.length === 0 ? (
           <div className="mt-7 rounded-xl border border-dashed border-brand-border bg-brand-surface p-10 text-center shadow-soft">
             <h2 className="text-lg font-bold">No assessments yet</h2>
-            <p className="mt-2 text-sm text-brand-muted">Your assessments will appear here after an educator adds you to a group.</p>
+            <p className="mt-2 text-sm text-brand-muted">Your assessments will appear here after a TA adds you to a group.</p>
           </div>
         ) : (
           <div className="mt-7 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
@@ -77,7 +77,7 @@ export default async function StudentDashboardPage() {
                 <p className="mt-1 text-sm font-semibold text-brand-muted">{assessment.semester}</p>
                 <div className="mt-5 grid grid-cols-2 gap-3 text-sm">
                   <div className="rounded-lg bg-brand-background p-3">
-                    <p className="text-xs text-brand-muted">Educator in charge</p>
+                    <p className="text-xs text-brand-muted">TA in charge</p>
                     <p className="mt-1 font-semibold">{educatorName}</p>
                   </div>
                   <div className="rounded-lg bg-brand-background p-3">

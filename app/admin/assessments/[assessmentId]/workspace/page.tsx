@@ -51,10 +51,9 @@ export default async function AdminAssessmentWorkspacePage({
   return (
     <div>
       <div className="px-5 pt-2">
-        <Link href={`/admin/assessments/${assessment.id}`} className="focus-ring text-sm font-semibold text-brand-primary">Back to assessment setup</Link>
+        <Link href={`/admin/assessments/${assessment.id}`} className="focus-ring inline-flex rounded-lg border border-brand-border bg-brand-surface px-4 py-2 text-sm font-semibold hover:border-brand-primary hover:bg-brand-primary hover:text-white">Back to assessment setup</Link>
         <p className="mt-3 text-sm font-semibold text-brand-primary">Admin oversight · {assessment.unitCode}</p>
         <h1 className="mt-1 text-3xl font-bold">{assessment.name}</h1>
-        <p className="mt-1 text-sm text-brand-muted">Read-only view of the educator workspace across all assigned educators.</p>
       </div>
       <EducatorAssessmentViews
         initialView={initialView}

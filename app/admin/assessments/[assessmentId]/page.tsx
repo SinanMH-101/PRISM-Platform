@@ -14,8 +14,8 @@ export default async function AssessmentDetailPage({ params }: { params: Promise
     <div className="space-y-6">
       <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
         <div>
-          <Link href="/admin" className="focus-ring text-sm font-semibold text-brand-primary">
-            Back to dashboard
+          <Link href="/admin" className="focus-ring inline-flex rounded-lg border border-brand-border bg-brand-surface px-4 py-2 text-sm font-semibold hover:border-brand-primary hover:bg-brand-primary hover:text-white">
+            Back to home
           </Link>
           <p className="mt-3 text-sm font-semibold text-brand-primary">{assessment.unitCode}</p>
           <h1 className="mt-1 text-3xl font-bold">{assessment.name}</h1>
@@ -23,9 +23,9 @@ export default async function AssessmentDetailPage({ params }: { params: Promise
         </div>
         <div className="flex flex-wrap gap-3">
           <DeleteAssessmentButton assessmentId={assessment.id} assessmentName={assessment.name} />
-          <Link href={`/admin/assessments/${assessment.id}/edit`} className="focus-ring rounded-lg border border-brand-border px-4 py-3 text-sm font-semibold hover:bg-brand-background">Edit assessment</Link>
-          <Link href={`/admin/assessments/${assessment.id}/workspace`} className="focus-ring rounded-lg border border-brand-primary px-4 py-3 text-sm font-semibold text-brand-primary hover:bg-brand-background">View Educator Dashboard</Link>
-          <Link href={`/admin/assessments/${assessment.id}/educators`} className="focus-ring rounded-lg bg-brand-primary px-4 py-3 text-sm font-semibold text-white hover:opacity-90">Manage educators</Link>
+          <Link href={`/admin/assessments/${assessment.id}/edit`} className="focus-ring rounded-lg border border-brand-border bg-brand-surface px-4 py-3 text-sm font-semibold transition-colors hover:border-brand-primary hover:bg-brand-primary hover:text-white">Edit assessment</Link>
+          <Link href={`/admin/assessments/${assessment.id}/workspace`} className="focus-ring rounded-lg border border-brand-border bg-brand-surface px-4 py-3 text-sm font-semibold transition-colors hover:border-brand-primary hover:bg-brand-primary hover:text-white">View Analytics</Link>
+          <Link href={`/admin/assessments/${assessment.id}/educators`} className="focus-ring rounded-lg border border-brand-border bg-brand-surface px-4 py-3 text-sm font-semibold transition-colors hover:border-brand-primary hover:bg-brand-primary hover:text-white">Manage TAs</Link>
         </div>
       </div>
 
@@ -43,7 +43,7 @@ export default async function AssessmentDetailPage({ params }: { params: Promise
           <Detail label="Semester" value={assessment.semester} />
           <Detail label="Cohort size" value={assessment.cohortSize.toString()} />
           <Detail label="Students per group" value={assessment.studentsPerGroup.toString()} />
-          <Detail label="Number of educators" value={assessment.educatorCount.toString()} />
+          <Detail label="Number of TAs" value={assessment.educatorCount.toString()} />
           <Detail label="Deadline schedule" value={formatSchedule(assessment)} />
           <Detail label="Weeks and start date" value={`${assessment.numberOfWeeks} weeks from ${formatDate(assessment.startDate)}`} />
           <Detail
@@ -54,7 +54,7 @@ export default async function AssessmentDetailPage({ params }: { params: Promise
                 : "Students see peer feedback only after the weekly deadline"
             }
           />
-          <Detail label="Educator progress" value={`${assessment.educatorsJoined}/${assessment.educatorsInvited} joined`} />
+          <Detail label="TA progress" value={`${assessment.educatorsJoined}/${assessment.educatorsInvited} joined`} />
         </dl>
       </section>
     </div>

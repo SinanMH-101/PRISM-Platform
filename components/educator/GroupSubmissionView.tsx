@@ -62,7 +62,7 @@ export default function GroupSubmissionView({ assessmentId, groups, weekNumbers,
             return (
               <button key={item.id} type="button" onClick={() => chooseGroup(item.id)} className={`focus-ring w-full rounded-lg px-3 py-3 text-left transition ${isActive ? "bg-brand-primary text-white" : "hover:bg-brand-background"}`}>
                 <span className="block truncate font-semibold">{item.name}</span>
-                <span className={`mt-1 block truncate text-xs font-medium ${isActive ? "text-white/90" : "text-brand-primary"}`}>{item.educatorName ?? "Unassigned educator"}</span>
+                <span className={`mt-1 block truncate text-xs font-medium ${isActive ? "text-white/90" : "text-brand-primary"}`}>{item.educatorName ?? "Unassigned TA"}</span>
                 <span className={`mt-1 block text-xs ${isActive ? "text-white/75" : "text-brand-muted"}`}>{item.members.length} {item.members.length === 1 ? "student" : "students"} · {item.submissions.length} submissions</span>
               </button>
             );
@@ -75,7 +75,7 @@ export default function GroupSubmissionView({ assessmentId, groups, weekNumbers,
           <div>
             <p className="text-sm font-semibold text-brand-primary">{group.className}</p>
             <h2 className="mt-1 text-2xl font-bold">{group.name}</h2>
-            <p className="mt-1 text-sm font-semibold text-brand-primary">Educator: {group.educatorName ?? "Unassigned"}</p>
+            <p className="mt-1 text-sm font-semibold text-brand-primary">TA: {group.educatorName ?? "Unassigned"}</p>
             {selectedWeek !== undefined && <p className="mt-2 text-sm font-semibold text-brand-primary">Week {selectedWeek}: {memberSubmissions.length}/{group.members.length} submitted</p>}
           </div>
           {weekNumbers.length > 0 && (

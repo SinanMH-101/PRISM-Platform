@@ -7,31 +7,65 @@ const statusStyles = {
   CLOSED: "bg-slate-100 text-slate-700 border-slate-200",
 };
 
-export default async function AdminDashboardPage() {
-  const assessments = await getAssessments();
+export default async function AdminDashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ query?: string | string[]; status?: string | string[] }>;
+}) {
+  const params = await searchParams;
+  const query = typeof params.query === "string" ? params.query.trim() : "";
+  const requestedStatus = typeof params.status === "string" ? params.status.toUpperCase() : "";
+  const status = (["DRAFT", "ACTIVE", "CLOSED"] as const).find((value) => value === requestedStatus);
+  const assessments = await getAssessments({ query, status });
+  const filtersApplied = Boolean(query || status);
 
   return (
     <div className="space-y-6">
       <section className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
         <div>
           <p className="text-sm font-semibold text-brand-primary">Admin</p>
-          <h1 className="mt-1 text-3xl font-bold">Admin Dashboard</h1>
+          <h1 className="mt-1 text-3xl font-bold">Home</h1>
         </div>
         <Link href="/admin/assessments/new" className="focus-ring rounded-lg bg-brand-primary px-4 py-3 text-sm font-semibold text-white hover:opacity-90">
           Create New Assessment
         </Link>
       </section>
 
-      <label className="block max-w-md text-sm font-semibold text-brand-muted">
-        Assessment search/filter later
-        <input disabled placeholder="Search is coming later" className="mt-2 w-full rounded-lg border border-brand-border bg-white px-3 py-2 text-brand-muted" />
-      </label>
+      <form action="/admin" className="flex flex-col gap-3 rounded-lg border border-brand-border bg-brand-surface p-4 shadow-soft md:flex-row md:items-end">
+        <label className="flex-1 text-sm font-semibold text-brand-muted">
+          Search assessments
+          <input
+            type="search"
+            name="query"
+            defaultValue={query}
+            placeholder="Search by name, unit code, or semester"
+            className="focus-ring mt-2 w-full rounded-lg border border-brand-border bg-white px-3 py-2 text-brand-text"
+          />
+        </label>
+        <label className="text-sm font-semibold text-brand-muted md:w-48">
+          Status
+          <select name="status" defaultValue={status ?? ""} className="focus-ring mt-2 w-full rounded-lg border border-brand-border bg-white px-3 py-2 text-brand-text">
+            <option value="">All statuses</option>
+            <option value="DRAFT">Draft</option>
+            <option value="ACTIVE">Active</option>
+            <option value="CLOSED">Closed</option>
+          </select>
+        </label>
+        <button className="focus-ring rounded-lg bg-brand-primary px-4 py-2 font-semibold text-white hover:opacity-90">Apply filters</button>
+        {filtersApplied && (
+          <Link href="/admin" className="focus-ring rounded-lg border border-brand-border bg-brand-surface px-4 py-2 text-center font-semibold hover:border-brand-primary hover:bg-brand-primary hover:text-white">
+            Clear
+          </Link>
+        )}
+      </form>
 
       <section className="grid gap-4 lg:grid-cols-2">
         {assessments.length === 0 && (
           <div className="rounded-lg border border-brand-border bg-brand-surface p-8 text-center shadow-soft">
-            <p className="font-semibold">No assessments yet.</p>
-            <p className="mt-1 text-sm text-brand-muted">Create the first assessment to start using database-backed admin data.</p>
+            <p className="font-semibold">{filtersApplied ? "No matching assessments." : "No assessments yet."}</p>
+            <p className="mt-1 text-sm text-brand-muted">
+              {filtersApplied ? "Try changing or clearing the search filters." : "Create the first assessment to get started."}
+            </p>
           </div>
         )}
         {assessments.map((assessment) => (
@@ -50,8 +84,8 @@ export default async function AdminDashboardPage() {
             <dl className="mt-5 grid gap-3 text-sm sm:grid-cols-2">
               <Stat label="Assessment weighting" value={`${assessment.assessmentWeighting}%`} />
               <Stat label="Process/team weighting" value={`${assessment.processWeighting}%`} />
-              <Stat label="Educators invited" value={assessment.educatorsInvited.toString()} />
-              <Stat label="Educators joined" value={assessment.educatorsJoined.toString()} />
+              <Stat label="TAs invited" value={assessment.educatorsInvited.toString()} />
+              <Stat label="TAs joined" value={assessment.educatorsJoined.toString()} />
               <Stat label="Cohort size" value={assessment.cohortSize.toString()} />
               <Stat label="Deadline schedule" value={formatSchedule(assessment)} />
             </dl>

@@ -52,7 +52,7 @@ export default function EducatorInvitePanel({ assessmentId, educators }: { asses
       {previews.length > 0 && <EmailPreviewModal previews={previews} onClose={() => setPreviews([])} />}
 
       <section className="rounded-lg border border-brand-border bg-brand-surface p-5 shadow-soft">
-        <h2 className="text-xl font-bold">Add educators</h2>
+        <h2 className="text-xl font-bold">Add TAs</h2>
         {error && <p className="mt-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-semibold text-red-700">{error}</p>}
         {!error && message && <p className="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-700">{message}</p>}
 
@@ -88,13 +88,13 @@ export default function EducatorInvitePanel({ assessmentId, educators }: { asses
 
       <section className="overflow-hidden rounded-lg border border-brand-border bg-brand-surface shadow-soft">
         <div className="border-b border-brand-border p-5">
-          <h2 className="text-xl font-bold">Educator invite status</h2>
+          <h2 className="text-xl font-bold">TA invite status</h2>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[860px] border-collapse text-left text-sm">
             <thead className="bg-brand-background text-brand-muted">
               <tr>
-                <th className="px-4 py-3 font-semibold">Educator name</th>
+                <th className="px-4 py-3 font-semibold">TA name</th>
                 <th className="px-4 py-3 font-semibold">Email</th>
                 <th className="px-4 py-3 font-semibold">Status</th>
                 <th className="px-4 py-3 font-semibold">Invite sent date</th>
@@ -135,7 +135,7 @@ export default function EducatorInvitePanel({ assessmentId, educators }: { asses
               {educators.length === 0 && (
                 <tr>
                   <td colSpan={6} className="px-4 py-8 text-center text-brand-muted">
-                    No educators added yet.
+                    No TAs added yet.
                   </td>
                 </tr>
               )}
@@ -167,7 +167,7 @@ function EmailPreviewModal({ previews, onClose }: { previews: InviteEmailPreview
         <div className="flex items-start justify-between gap-4 border-b border-brand-border p-5">
           <div>
             <h2 className="text-xl font-bold">Email preview</h2>
-            <p className="mt-1 text-sm text-brand-muted">Review the invitation and the educator sign-in details.</p>
+            <p className="mt-1 text-sm text-brand-muted">Review the invitation and the TA sign-in details.</p>
           </div>
           <button onClick={onClose} className="focus-ring rounded-lg border border-brand-border px-3 py-2 text-sm font-semibold hover:bg-brand-background">
             Close

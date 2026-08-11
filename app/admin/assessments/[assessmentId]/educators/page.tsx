@@ -20,13 +20,13 @@ export default async function AssessmentEducatorsPage({ params }: { params: Prom
   return (
     <div className="space-y-6">
       <div>
-        <Link href={`/admin/assessments/${assessment.id}`} className="focus-ring text-sm font-semibold text-brand-primary">
+        <Link href={`/admin/assessments/${assessment.id}`} className="focus-ring inline-flex rounded-lg border border-brand-border bg-brand-surface px-4 py-2 text-sm font-semibold hover:border-brand-primary hover:bg-brand-primary hover:text-white">
           Back to assessment details
         </Link>
         <p className="mt-3 text-sm font-semibold text-brand-primary">{assessment.unitCode}</p>
-        <h1 className="mt-1 text-3xl font-bold">Educator allocation</h1>
+        <h1 className="mt-1 text-3xl font-bold">TA allocation</h1>
         <p className="mt-2 max-w-3xl text-sm text-brand-muted">
-          Add educators by pasted email addresses or manually-created accounts, then track invitation status.
+          Add TAs by pasted email addresses or manually-created accounts, then track invitation status.
         </p>
       </div>
       <EducatorInvitePanel assessmentId={assessment.id} educators={educatorRows} />

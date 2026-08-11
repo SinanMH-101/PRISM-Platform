@@ -86,15 +86,15 @@ function buildHtmlEmail({
   const safePassword = temporaryPassword ? escapeHtml(temporaryPassword) : null;
   const safeLoginUrl = escapeHtml(loginUrl);
   const introduction = temporaryPassword
-    ? "An educator account has been created for you. Use the temporary credentials below to get started."
-    : "You have been invited to join this assessment as an educator. Sign in with your existing PRISM account to get started.";
+    ? "A TA account has been created for you. Use the temporary credentials below to get started."
+    : "You have been invited to join this assessment as a TA. Sign in with your existing PRISM account to get started.";
 
   return `<!doctype html>
 <html lang="en">
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>PRISM educator invitation</title>
+    <title>PRISM TA invitation</title>
   </head>
   <body style="margin:0;padding:0;background:#FFFFFF;color:#373A36;font-family:Arial,'Helvetica Neue',sans-serif;">
     <div style="display:none;max-height:0;overflow:hidden;opacity:0;">You have been invited to ${safeUnitCode} ${safeAssessmentName} in PRISM.</div>
@@ -109,7 +109,7 @@ function buildHtmlEmail({
               <td align="center" style="padding:28px 36px 24px;background:#76232F;color:#FFFFFF;text-align:center;">
                 <p style="margin:0 0 8px;font-size:13px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:#EDEBE5;">Macquarie University</p>
                 <h1 style="margin:0;font-size:30px;line-height:1.2;font-weight:700;">Welcome to PRISM</h1>
-                <p style="margin:10px 0 0;font-size:16px;line-height:1.5;color:#FFFFFF;">Educator assessment invitation</p>
+                <p style="margin:10px 0 0;font-size:16px;line-height:1.5;color:#FFFFFF;">TA assessment invitation</p>
               </td>
             </tr>
             <tr>
@@ -182,7 +182,7 @@ function buildPreview({
       username,
       temporaryPassword,
       body: [
-        `An educator account has been created for ${unitCode} ${assessmentName}.`,
+        `A TA account has been created for ${unitCode} ${assessmentName}.`,
         "",
         `Username: ${username}`,
         `Temporary password: ${temporaryPassword}`,

@@ -102,7 +102,7 @@ export async function importGroupsCsvAction(_previousState: ImportGroupsActionSt
     let group = groupCache.get(groupName);
     if (!group) {
       const existingGroup = await prisma.group.findFirst({ where: { name: groupName, class: { assessmentId } }, select: { id: true, educatorId: true } });
-      if (existingGroup?.educatorId && existingGroup.educatorId !== educator.id) { skipped.push(`Row ${rowNumber}: ${groupName} belongs to another educator.`); continue; }
+      if (existingGroup?.educatorId && existingGroup.educatorId !== educator.id) { skipped.push(`Row ${rowNumber}: ${groupName} belongs to another TA.`); continue; }
       group = existingGroup ?? await prisma.group.create({ data: { name: groupName, classId: assessmentClass.id, educatorId: educator.id }, select: { id: true, educatorId: true } });
       if (!existingGroup) groupsCreated += 1;
       else if (!existingGroup.educatorId) await prisma.group.update({ where: { id: existingGroup.id }, data: { educatorId: educator.id } });
@@ -279,7 +279,7 @@ export async function overrideContributionScoresAction(
 
   revalidatePath(`/educator/assessments/${assessmentId}`);
   revalidatePath(`/student/assessments/${assessmentId}`);
-  return { status: "success", message: "Adjusted scores saved. Students will see them marked as educator overrides." };
+  return { status: "success", message: "Adjusted scores saved. Students will see them marked as TA overrides." };
 }
 
 export async function addStudentAction(

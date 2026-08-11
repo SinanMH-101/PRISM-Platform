@@ -256,7 +256,7 @@ export async function createEducatorAccountAction(_previousState: EducatorInvite
   const name = String(formData.get("name") ?? "").trim();
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const password = String(formData.get("password") ?? "");
-  if (!name || !isValidEmail(email)) return { error: "Enter a valid educator name and email.", previews: [] };
+  if (!name || !isValidEmail(email)) return { error: "Enter a valid TA name and email.", previews: [] };
 
   const user = await prisma.user.upsert({
     where: { email },
@@ -299,7 +299,7 @@ export async function resendEducatorInviteAction(_previousState: EducatorInviteA
   const id = String(formData.get("id") ?? "");
   const assessmentId = String(formData.get("assessmentId") ?? "");
   const educator = await prisma.assessmentEducator.findUnique({ where: { id }, select: { email: true } });
-  if (!educator) return { error: "Educator invite not found.", previews: [] };
+  if (!educator) return { error: "TA invite not found.", previews: [] };
 
   const result = await inviteEducatorsToAssessment(assessmentId, [educator.email]);
   revalidatePath(`/admin/assessments/${assessmentId}/educators`);

@@ -56,7 +56,7 @@ export default function AccountsPanel({ accounts }: { accounts: Account[] }) {
           Role
           <select value={role} onChange={(event) => setRole(event.target.value as typeof role)} className="focus-ring mt-2 h-11 w-full rounded-lg border border-brand-border bg-white px-3 font-normal">
             <option value="ALL">All accounts</option>
-            <option value="EDUCATOR">Educators</option>
+            <option value="EDUCATOR">TAs</option>
             <option value="STUDENT">Students</option>
           </select>
         </label>
@@ -71,7 +71,7 @@ export default function AccountsPanel({ accounts }: { accounts: Account[] }) {
               <div>
                 <div className="flex flex-wrap items-center gap-2">
                   <h2 className="text-lg font-bold">{account.name}</h2>
-                  <span className="rounded-full border border-brand-border bg-brand-background px-2 py-1 text-xs font-bold">{account.role === "EDUCATOR" ? "Educator" : "Student"}</span>
+                  <span className="rounded-full border border-brand-border bg-brand-background px-2 py-1 text-xs font-bold">{account.role === "EDUCATOR" ? "TA" : "Student"}</span>
                   {account.mustChangePassword && <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-1 text-xs font-bold text-amber-700">Password change required</span>}
                 </div>
                 <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">

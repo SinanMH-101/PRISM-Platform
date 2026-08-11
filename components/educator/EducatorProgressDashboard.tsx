@@ -93,7 +93,7 @@ export default function EducatorProgressDashboard({
                   <div>
                     <div className="flex flex-wrap items-center gap-2"><h4 className="font-bold">{group.name}</h4></div>
                     <p className="mt-1 text-xs text-brand-muted">{group.className} · {group.members.length} {group.members.length === 1 ? "student" : "students"}</p>
-                    {group.educatorName && <p className="mt-1 text-xs text-brand-muted">Educator: {group.educatorName}</p>}
+                    {group.educatorName && <p className="mt-1 text-xs text-brand-muted">TA: {group.educatorName}</p>}
                   </div>
 
                   <div>

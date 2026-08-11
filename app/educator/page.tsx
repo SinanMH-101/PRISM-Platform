@@ -19,7 +19,7 @@ export default async function EducatorPage() {
     <main className="min-h-screen bg-brand-background text-brand-text">
       <nav className="border-b border-brand-border bg-brand-surface">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-5 py-4">
-          <BrandIdentity subtitle={`Educator workspace · ${user.name}`} />
+          <BrandIdentity subtitle={`TA workspace · ${user.name}`} />
           <form action={educatorLogoutAction}>
             <button className="focus-ring rounded-lg border border-brand-border px-3 py-2 text-sm font-semibold hover:bg-brand-background">Log out</button>
           </form>
@@ -27,7 +27,7 @@ export default async function EducatorPage() {
       </nav>
       <section className="mx-auto max-w-5xl space-y-5 px-5 py-7">
         <div>
-          <p className="text-sm font-semibold text-brand-primary">Educator</p>
+          <p className="text-sm font-semibold text-brand-primary">TA</p>
           <h1 className="mt-1 text-3xl font-bold">My assessments</h1>
         </div>
 

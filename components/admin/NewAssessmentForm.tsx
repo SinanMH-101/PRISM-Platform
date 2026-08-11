@@ -34,7 +34,7 @@ export default function NewAssessmentForm({ assessment, minimumWeeks = 1 }: { as
         <h2 className="mt-2 text-2xl font-bold">{assessment ? "Update assessment settings" : "Create a new assessment"}</h2>
         <p className="mt-2 max-w-2xl text-sm leading-6 text-white/80">Configure the assessment structure, teaching team, submission schedule, and student feedback experience.</p>
       </div>
-      <FormSection number="1" title="Assessment details" description="Give educators and students a clear way to identify this assessment.">
+      <FormSection number="1" title="Assessment details" description="Give TAs and students a clear way to identify this assessment.">
         <div className="grid gap-4 sm:grid-cols-[minmax(0,1.5fr)_minmax(180px,0.7fr)]">
           <TextField label="Assessment name" name="name" placeholder="Assessment 1 Peer Review" defaultValue={assessment?.name} />
           <TextField label="Unit code" name="unitCode" placeholder="COMP3000" defaultValue={assessment?.unitCode} />
@@ -71,8 +71,8 @@ export default function NewAssessmentForm({ assessment, minimumWeeks = 1 }: { as
         </div>
       </FormSection>
 
-      <FormSection number="3" title="Cohort and staffing" description="These values help plan group capacity and educator allocation.">
-        <div className="grid gap-4 sm:grid-cols-3"><NumberField label="Cohort size" name="cohortSize" defaultValue={assessment?.cohortSize ?? 120} /><NumberField label="Students per group" name="studentsPerGroup" min={1} defaultValue={assessment?.studentsPerGroup ?? 5} /><NumberField label="Number of educators" name="educatorCount" defaultValue={assessment?.educatorCount ?? 4} /></div>
+      <FormSection number="3" title="Cohort and staffing" description="These values help plan group capacity and TA allocation.">
+        <div className="grid gap-4 sm:grid-cols-3"><NumberField label="Cohort size" name="cohortSize" defaultValue={assessment?.cohortSize ?? 120} /><NumberField label="Students per group" name="studentsPerGroup" min={1} defaultValue={assessment?.studentsPerGroup ?? 5} /><NumberField label="Number of TAs" name="educatorCount" defaultValue={assessment?.educatorCount ?? 4} /></div>
       </FormSection>
 
       <FormSection number="4" title="Deadline schedule" description="Build the recurring weekly submission timetable.">
@@ -115,7 +115,7 @@ export default function NewAssessmentForm({ assessment, minimumWeeks = 1 }: { as
 
       <div className="flex flex-col gap-3 border-t border-brand-border bg-brand-background px-6 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-8">
         <button className="focus-ring w-full rounded-lg bg-brand-primary px-6 py-3 font-semibold text-white shadow-sm hover:opacity-90 sm:w-auto">
-          {assessment ? "Save changes" : "Continue to educator allocation"}
+          {assessment ? "Save changes" : "Continue to TA allocation"}
         </button>
       </div>
     </form>

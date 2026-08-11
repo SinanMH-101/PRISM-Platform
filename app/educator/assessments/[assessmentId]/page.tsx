@@ -72,9 +72,9 @@ export default async function EducatorAssessmentPage({
     <main className="min-h-screen bg-brand-background text-brand-text">
       <nav className="border-b border-brand-border bg-brand-surface">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-4">
-          <BrandIdentity subtitle={`Educator workspace · ${educator.name}`} />
+          <BrandIdentity subtitle={`TA workspace · ${educator.name}`} />
           <div className="flex items-center gap-3">
-            <Link href="/educator" className="focus-ring rounded-lg border border-brand-border px-3 py-2 text-sm font-semibold hover:bg-brand-background">
+            <Link href="/educator" className="focus-ring rounded-lg border border-brand-border bg-brand-surface px-3 py-2 text-sm font-semibold hover:border-brand-primary hover:bg-brand-primary hover:text-white">
               Back to assessments
             </Link>
             <form action={educatorLogoutAction}>

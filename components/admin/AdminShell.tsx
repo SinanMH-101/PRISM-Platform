@@ -54,7 +54,7 @@ export default function AdminShell({
           <div className="flex flex-wrap gap-2 text-sm">
             <span className="rounded-lg border border-brand-border px-3 py-2 text-brand-muted">Signed in as {userName}</span>
             <Link href="/admin" className={navLinkClass(pathname === "/admin" || pathname.startsWith("/admin/assessments"))}>
-              Dashboard
+              Home
             </Link>
             <Link href="/admin/settings" className={navLinkClass(pathname.startsWith("/admin/settings"))}>
               Settings

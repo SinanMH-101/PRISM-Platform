@@ -6,9 +6,22 @@ export type AdminAssessment = Awaited<ReturnType<typeof getAssessments>>[number]
 export type AdminAssessmentDetail = NonNullable<Awaited<ReturnType<typeof getAssessment>>>;
 export type AdminEducator = Awaited<ReturnType<typeof getAssessmentEducators>>[number];
 
-export async function getAssessments() {
+export async function getAssessments(filters: { query?: string; status?: "DRAFT" | "ACTIVE" | "CLOSED" } = {}) {
+  const query = filters.query?.trim();
   const assessments = await prisma.assessment.findMany({
-    where: { deletedAt: null },
+    where: {
+      deletedAt: null,
+      ...(filters.status ? { status: filters.status } : {}),
+      ...(query
+        ? {
+            OR: [
+              { name: { contains: query, mode: "insensitive" } },
+              { unitCode: { contains: query, mode: "insensitive" } },
+              { semester: { contains: query, mode: "insensitive" } },
+            ],
+          }
+        : {}),
+    },
     orderBy: { createdAt: "desc" },
     include: {
       educators: {
