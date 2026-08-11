@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import type { CSSProperties } from "react";
 import { logoutAction } from "@/app/admin/actions";
 
@@ -19,6 +22,7 @@ export default function AdminShell({
   settings,
 }: Readonly<{ children: React.ReactNode; userName: string; settings: AdminShellSettings }>) {
   const appName = settings.name?.trim() || "University Team Assessment";
+  const pathname = usePathname();
   const themeStyle = {
     "--color-primary": settings.primaryColour,
     "--color-secondary": settings.secondaryColour,
@@ -44,25 +48,22 @@ export default function AdminShell({
             </div>
             <div>
               <p className="text-sm font-semibold">{appName}</p>
-              <p className="text-xs text-brand-muted">Admin workspace</p>
+              <p className="text-xs text-brand-muted">Convenor workspace</p>
             </div>
           </Link>
           <div className="flex flex-wrap gap-2 text-sm">
             <span className="rounded-lg border border-brand-border px-3 py-2 text-brand-muted">Signed in as {userName}</span>
-            <Link href="/admin" className="focus-ring rounded-lg border border-brand-border px-3 py-2 font-semibold hover:bg-brand-background">
+            <Link href="/admin" className={navLinkClass(pathname === "/admin" || pathname.startsWith("/admin/assessments"))}>
               Dashboard
             </Link>
-            <Link href="/admin/assessments/new" className="focus-ring rounded-lg bg-brand-primary px-3 py-2 font-semibold text-white hover:opacity-90">
-              New Assessment
-            </Link>
-            <Link href="/admin/settings" className="focus-ring rounded-lg border border-brand-border px-3 py-2 font-semibold hover:bg-brand-background">
+            <Link href="/admin/settings" className={navLinkClass(pathname.startsWith("/admin/settings"))}>
               Settings
             </Link>
-            <Link href="/admin/accounts" className="focus-ring rounded-lg border border-brand-border px-3 py-2 font-semibold hover:bg-brand-background">
+            <Link href="/admin/accounts" className={navLinkClass(pathname.startsWith("/admin/accounts"))}>
               Accounts
             </Link>
             <form action={logoutAction}>
-              <button className="focus-ring rounded-lg border border-brand-border px-3 py-2 font-semibold hover:bg-brand-background">Log out</button>
+              <button className={navLinkClass(false)}>Log out</button>
             </form>
           </div>
         </div>
@@ -70,4 +71,12 @@ export default function AdminShell({
       <div className="mx-auto max-w-7xl px-5 py-7">{children}</div>
     </main>
   );
+}
+
+function navLinkClass(active: boolean) {
+  return `focus-ring rounded-lg border px-3 py-2 font-semibold transition-colors ${
+    active
+      ? "border-brand-primary bg-brand-primary text-white"
+      : "border-brand-border bg-brand-surface text-brand-text hover:border-brand-primary hover:bg-brand-primary hover:text-white"
+  }`;
 }

@@ -67,11 +67,14 @@ model Assessment {
   startDate           DateTime           @default(now())
   feedbackVisibility  FeedbackVisibility @default(AFTER_DEADLINE)
   status              AssessmentStatus   @default(DRAFT)
+  deletedAt           DateTime?
 
   weeks     AssessmentWeek[]
   classes   Class[]
   educators AssessmentEducator[]
   updatedAt DateTime             @updatedAt
+
+  @@index([deletedAt])
 }
 
 model Class {

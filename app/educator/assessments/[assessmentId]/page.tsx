@@ -28,6 +28,7 @@ export default async function EducatorAssessmentPage({
       userId: educator.id,
       status: "JOINED",
       removedAt: null,
+      assessment: { deletedAt: null },
     },
     include: {
       assessment: {

@@ -10,7 +10,7 @@ export default async function StudentDashboardPage() {
   if (student.mustChangePassword) redirect("/change-password");
 
   const memberships = await prisma.groupMember.findMany({
-    where: { studentId: student.id },
+    where: { studentId: student.id, group: { class: { assessment: { deletedAt: null } } } },
     include: {
       group: {
         include: {

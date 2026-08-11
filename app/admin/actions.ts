@@ -125,7 +125,7 @@ export async function updateAssessmentAction(formData: FormData) {
   const deadlineTime = String(formData.get("deadlineTime") ?? "");
   const numberOfWeeks = numberValue(formData.get("weeks"), 0);
   const startDateValue = String(formData.get("startDate") ?? "");
-  const existingAssessment = await prisma.assessment.findUnique({ where: { id: assessmentId }, select: { feedbackVisibility: true } });
+  const existingAssessment = await prisma.assessment.findFirst({ where: { id: assessmentId, deletedAt: null }, select: { feedbackVisibility: true } });
   if (!existingAssessment) return;
   const feedbackVisibility = enumValue(formData.get("feedbackVisibility")) || existingAssessment.feedbackVisibility;
   const validDate = /^\d{4}-\d{2}-\d{2}$/.test(startDateValue) && !Number.isNaN(new Date(`${startDateValue}T00:00:00`).valueOf());
@@ -201,6 +201,23 @@ export async function updateAssessmentAction(formData: FormData) {
   revalidatePath(`/admin/assessments/${assessmentId}/workspace`);
   revalidatePath(`/educator/assessments/${assessmentId}`);
   redirect(`/admin/assessments/${assessmentId}`);
+}
+
+export async function deleteAssessmentAction(formData: FormData) {
+  await requireAdmin();
+
+  const assessmentId = String(formData.get("assessmentId") ?? "");
+  if (!assessmentId) return;
+
+  await prisma.assessment.updateMany({
+    where: { id: assessmentId, deletedAt: null },
+    data: { deletedAt: new Date(), status: "CLOSED" },
+  });
+
+  revalidatePath("/admin");
+  revalidatePath("/educator");
+  revalidatePath("/student/dashboard");
+  redirect("/admin");
 }
 
 export async function invitePastedEducatorsAction(_previousState: EducatorInviteActionState, formData: FormData): Promise<EducatorInviteActionState> {

@@ -65,7 +65,7 @@ export async function importGroupsCsvAction(_previousState: ImportGroupsActionSt
   if (!(file instanceof File) || file.size === 0) return { status: "error", message: "Choose a CSV or tab-delimited file first." };
 
   const invite = await prisma.assessmentEducator.findFirst({
-    where: { assessmentId, userId: educator.id, status: "JOINED", removedAt: null },
+    where: { assessmentId, userId: educator.id, status: "JOINED", removedAt: null, assessment: { deletedAt: null } },
     include: { assessment: true },
   });
   if (!invite) return { status: "error", message: "This assessment could not be accessed." };
@@ -164,6 +164,7 @@ export async function createGroupAction(formData: FormData) {
       userId: educator.id,
       status: "JOINED",
       removedAt: null,
+      assessment: { deletedAt: null },
     },
     include: { assessment: true },
   });
@@ -202,7 +203,7 @@ export async function updateGroupCapacityAction(formData: FormData) {
 
   const [invite, group] = await Promise.all([
     prisma.assessmentEducator.findFirst({
-      where: { assessmentId, userId: educator.id, status: "JOINED", removedAt: null },
+      where: { assessmentId, userId: educator.id, status: "JOINED", removedAt: null, assessment: { deletedAt: null } },
       select: { id: true, assessment: { select: { studentsPerGroup: true } } },
     }),
     prisma.group.findFirst({
@@ -238,7 +239,7 @@ export async function overrideContributionScoresAction(
     where: {
       id: submissionId,
       group: { class: { assessmentId } },
-      assessmentWeek: { assessmentId, assessment: { educators: { some: { userId: educator.id, status: "JOINED", removedAt: null } } } },
+      assessmentWeek: { assessmentId, assessment: { deletedAt: null, educators: { some: { userId: educator.id, status: "JOINED", removedAt: null } } } },
     },
     include: { scores: true, group: { include: { members: { select: { studentId: true } } } } },
   });
@@ -293,7 +294,7 @@ export async function addStudentAction(
   const email = String(formData.get("studentEmail") ?? "").trim().toLowerCase();
 
   const invite = await prisma.assessmentEducator.findFirst({
-    where: { assessmentId, userId: educator.id, status: "JOINED", removedAt: null },
+    where: { assessmentId, userId: educator.id, status: "JOINED", removedAt: null, assessment: { deletedAt: null } },
     include: { assessment: true },
   });
   const group = await prisma.group.findFirst({
@@ -370,7 +371,7 @@ export async function deleteGroupAction(formData: FormData) {
   const groupId = String(formData.get("groupId") ?? "");
 
   const invite = await prisma.assessmentEducator.findFirst({
-    where: { assessmentId, userId: educator.id, status: "JOINED", removedAt: null },
+    where: { assessmentId, userId: educator.id, status: "JOINED", removedAt: null, assessment: { deletedAt: null } },
     select: { id: true },
   });
   const group = await prisma.group.findFirst({
@@ -396,7 +397,7 @@ export async function removeStudentFromGroupAction(formData: FormData) {
 
   const [invite, membership] = await Promise.all([
     prisma.assessmentEducator.findFirst({
-      where: { assessmentId, userId: educator.id, status: "JOINED", removedAt: null },
+      where: { assessmentId, userId: educator.id, status: "JOINED", removedAt: null, assessment: { deletedAt: null } },
       select: { id: true },
     }),
     prisma.groupMember.findFirst({

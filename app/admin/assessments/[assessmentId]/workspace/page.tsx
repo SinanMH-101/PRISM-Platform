@@ -16,8 +16,8 @@ export default async function AdminAssessmentWorkspacePage({
   const { assessmentId } = await params;
   const requestedView = (await searchParams).view;
   const initialView = requestedView === "dashboard" || requestedView === "groupView" || requestedView === "groups" ? requestedView : "groups";
-  const assessment = await prisma.assessment.findUnique({
-    where: { id: assessmentId },
+  const assessment = await prisma.assessment.findFirst({
+    where: { id: assessmentId, deletedAt: null },
     include: {
       weeks: { orderBy: { weekNumber: "asc" } },
       classes: {

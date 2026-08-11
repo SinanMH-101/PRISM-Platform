@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { formatDate, formatSchedule, getAssessment, processOverallWeight } from "@/components/admin/data";
+import DeleteAssessmentButton from "@/components/admin/DeleteAssessmentButton";
 
 export default async function AssessmentDetailPage({ params }: { params: Promise<{ assessmentId: string }> }) {
   const { assessmentId } = await params;
@@ -21,6 +22,7 @@ export default async function AssessmentDetailPage({ params }: { params: Promise
           <p className="mt-1 text-sm font-semibold text-brand-muted">{assessment.semester}</p>
         </div>
         <div className="flex flex-wrap gap-3">
+          <DeleteAssessmentButton assessmentId={assessment.id} assessmentName={assessment.name} />
           <Link href={`/admin/assessments/${assessment.id}/edit`} className="focus-ring rounded-lg border border-brand-border px-4 py-3 text-sm font-semibold hover:bg-brand-background">Edit assessment</Link>
           <Link href={`/admin/assessments/${assessment.id}/workspace`} className="focus-ring rounded-lg border border-brand-primary px-4 py-3 text-sm font-semibold text-brand-primary hover:bg-brand-background">View Educator Dashboard</Link>
           <Link href={`/admin/assessments/${assessment.id}/educators`} className="focus-ring rounded-lg bg-brand-primary px-4 py-3 text-sm font-semibold text-white hover:opacity-90">Manage educators</Link>

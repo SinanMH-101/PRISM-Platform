@@ -8,6 +8,7 @@ export type AdminEducator = Awaited<ReturnType<typeof getAssessmentEducators>>[n
 
 export async function getAssessments() {
   const assessments = await prisma.assessment.findMany({
+    where: { deletedAt: null },
     orderBy: { createdAt: "desc" },
     include: {
       educators: {
@@ -27,8 +28,8 @@ export async function getAssessments() {
 }
 
 export async function getAssessment(assessmentId: string) {
-  const assessment = await prisma.assessment.findUnique({
-    where: { id: assessmentId },
+  const assessment = await prisma.assessment.findFirst({
+    where: { id: assessmentId, deletedAt: null },
     include: {
       educators: {
         where: { removedAt: null },

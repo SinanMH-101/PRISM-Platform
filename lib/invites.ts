@@ -208,8 +208,8 @@ function buildPreview({
 }
 
 export async function inviteEducatorsToAssessment(assessmentId: string, emails: string[]): Promise<InviteEducatorsResult> {
-  const assessment = await prisma.assessment.findUnique({
-    where: { id: assessmentId },
+  const assessment = await prisma.assessment.findFirst({
+    where: { id: assessmentId, deletedAt: null },
     select: { id: true, name: true, unitCode: true },
   });
 

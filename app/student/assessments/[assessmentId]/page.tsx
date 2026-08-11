@@ -9,7 +9,7 @@ export default async function StudentAssessmentRoute({ params }: { params: Promi
   const { assessmentId } = await params;
 
   const membership = await prisma.groupMember.findFirst({
-    where: { studentId: student.id, group: { class: { assessmentId } } },
+    where: { studentId: student.id, group: { class: { assessmentId, assessment: { deletedAt: null } } } },
     include: {
       group: {
         include: {

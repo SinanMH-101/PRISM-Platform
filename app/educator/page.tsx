@@ -10,7 +10,7 @@ export default async function EducatorPage() {
   if (user.mustChangePassword) redirect("/change-password");
 
   const invites = await prisma.assessmentEducator.findMany({
-    where: { userId: user.id, removedAt: null },
+    where: { userId: user.id, removedAt: null, assessment: { deletedAt: null } },
     include: { assessment: true },
     orderBy: { invitedAt: "desc" },
   });
