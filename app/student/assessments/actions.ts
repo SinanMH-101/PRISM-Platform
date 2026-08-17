@@ -23,26 +23,27 @@ export async function submitStudentAssessment(input: SubmissionInput): Promise<{
 
   const week = await prisma.assessmentWeek.findFirst({ where: { id: input.weekId, assessmentId: input.assessmentId } });
   if (!week) return { ok: false, error: "This assessment week could not be found." };
+  const existingSubmission = await prisma.submission.findUnique({
+    where: { assessmentWeekId_groupId_submittedByStudentId: { assessmentWeekId: week.id, groupId: membership.groupId, submittedByStudentId: student.id } },
+    include: { scores: true },
+  });
   const now = new Date();
-  if (week.locked || now < week.opensAt || now > week.dueAt) return { ok: false, error: "This submission window is not open." };
+  const educatorUnlocked = Boolean(existingSubmission && !existingSubmission.locked);
+  if (!educatorUnlocked && (week.locked || now < week.opensAt || now > week.dueAt)) return { ok: false, error: "This submission window is not open." };
 
   const memberIds = membership.group.members.map((member) => member.studentId).sort();
   const scoreIds = input.scores.map((score) => score.studentId).sort();
   const feedbackIds = input.feedback.map((item) => item.studentId).sort();
   if (new Set(scoreIds).size !== memberIds.length || memberIds.some((id, index) => id !== scoreIds[index])) return { ok: false, error: "Scores must be provided once for every group member." };
   if (new Set(feedbackIds).size !== memberIds.length || memberIds.some((id, index) => id !== feedbackIds[index])) return { ok: false, error: "Feedback entries must match your current group." };
-  if (input.scores.some((score) => !Number.isInteger(score.points) || score.points < 0 || score.points > 100) || input.scores.reduce((sum, score) => sum + score.points, 0) !== 100) return { ok: false, error: "Contribution points must be whole numbers totalling exactly 100." };
+  if (input.scores.some((score) => !Number.isFinite(score.points) || score.points < 0 || score.points > 100) || Math.abs(input.scores.reduce((sum, score) => sum + score.points, 0) - 100) > 0.000001) return { ok: false, error: "Contribution points must total exactly 100." };
   if (input.feedback.some((item) => item.comment.length > 2000)) return { ok: false, error: "Each feedback response must be 2,000 characters or fewer." };
 
   try {
-    const existingSubmission = await prisma.submission.findUnique({
-      where: { assessmentWeekId_groupId_submittedByStudentId: { assessmentWeekId: week.id, groupId: membership.groupId, submittedByStudentId: student.id } },
-      include: { scores: true },
-    });
     const existingScoreIds = existingSubmission?.scores.map((score) => score.targetStudentId).sort() ?? [];
-    const existingTotal = existingSubmission?.scores.reduce((sum, score) => sum + (score.educatorOverridePoints ?? score.points), 0) ?? 0;
-    const existingComplete = Boolean(existingSubmission) && memberIds.length === existingScoreIds.length && memberIds.every((id, index) => id === existingScoreIds[index]) && existingTotal === 100;
-    if (existingComplete) return { ok: false, error: "You have already submitted this week." };
+    const existingTotal = existingSubmission?.scores.reduce((sum, score) => sum + Number(score.educatorOverridePoints ?? score.points), 0) ?? 0;
+    const existingComplete = Boolean(existingSubmission) && memberIds.length === existingScoreIds.length && memberIds.every((id, index) => id === existingScoreIds[index]) && Math.abs(existingTotal - 100) < 0.000001;
+    if (existingComplete && existingSubmission?.locked) return { ok: false, error: "You have already submitted this week." };
 
     if (existingSubmission) {
       await prisma.$transaction([
@@ -52,6 +53,7 @@ export async function submitStudentAssessment(input: SubmissionInput): Promise<{
           where: { id: existingSubmission.id },
           data: {
             submittedAt: new Date(),
+            locked: true,
             scores: { create: input.scores.map((score) => ({ targetStudentId: score.studentId, points: score.points })) },
             feedback: { create: input.feedback.map((item) => ({ fromStudentId: student.id, toStudentId: item.studentId, comment: item.comment })) },
           },

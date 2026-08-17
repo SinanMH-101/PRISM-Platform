@@ -127,7 +127,7 @@ function countValidSubmissions(group: ProgressGroup, weekIds: Set<string>) {
     if (!weekIds.has(submission.assessmentWeekId) || !memberIds.has(submission.submittedByStudentId)) return false;
     const scoreIds = new Set(submission.scores.map((score) => score.targetStudentId));
     const total = submission.scores.reduce((sum, score) => sum + (score.educatorOverridePoints ?? score.points), 0);
-    return scoreIds.size === memberIds.size && [...memberIds].every((id) => scoreIds.has(id)) && total === 100;
+    return scoreIds.size === memberIds.size && [...memberIds].every((id) => scoreIds.has(id)) && Math.round(total * 10) === 1000;
   }).map((submission) => `${submission.assessmentWeekId}:${submission.submittedByStudentId}`)).size;
 }
 

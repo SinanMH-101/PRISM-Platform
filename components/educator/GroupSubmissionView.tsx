@@ -1,12 +1,13 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { overrideContributionScoresAction, type OverrideScoresActionState } from "@/app/educator/actions";
+import { overrideContributionScoresAction, setSubmissionLockAction, type OverrideScoresActionState } from "@/app/educator/actions";
 
 type Submission = {
   id: string;
   weekNumber: number;
   submittedAt: string;
+  locked: boolean;
   submittedBy: { id: string; name: string };
   scores: { targetStudentId: string; targetStudentName: string; originalPoints: number; points: number; overridden: boolean }[];
   feedback: { toStudentId: string; toStudentName: string; comment: string }[];
@@ -113,10 +114,18 @@ export default function GroupSubmissionView({ assessmentId, groups, weekNumbers,
             {submissions.map((submission) => (
               <article key={submission.id} className="overflow-hidden rounded-xl border border-brand-border bg-white">
                 <div className="flex flex-col justify-between gap-2 border-b border-brand-border px-5 py-4 sm:flex-row sm:items-center">
-                  <div><p className="text-xs font-semibold uppercase tracking-wide text-brand-muted">Submission from</p><div className="mt-1 flex flex-wrap items-center gap-2"><p className="font-bold text-brand-text">{submission.submittedBy.name}</p>{!submissionIsComplete(submission, memberIds) && <span className="rounded-full bg-amber-100 px-2 py-1 text-[11px] font-bold text-amber-700">Incomplete: resubmission required</span>}</div></div>
+                  <div><p className="text-xs font-semibold uppercase tracking-wide text-brand-muted">Submission from</p><div className="mt-1 flex flex-wrap items-center gap-2"><p className="font-bold text-brand-text">{submission.submittedBy.name}</p><span className={`rounded-full px-2 py-1 text-[11px] font-bold ${submission.locked ? "bg-slate-100 text-slate-700" : "bg-emerald-100 text-emerald-700"}`}>{submission.locked ? "Locked" : "Unlocked"}</span>{!submissionIsComplete(submission, memberIds) && <span className="rounded-full bg-amber-100 px-2 py-1 text-[11px] font-bold text-amber-700">Incomplete: resubmission required</span>}</div></div>
                   <div className="flex flex-wrap items-center gap-3">
                     <time className="text-xs font-medium text-brand-muted">Submitted {formatDate(submission.submittedAt)}</time>
-                    {!readOnly && <button type="button" onClick={() => setEditingSubmission(submission)} className="focus-ring rounded-lg border border-brand-border px-3 py-2 text-xs font-bold text-brand-primary hover:bg-brand-background">Adjust scores</button>}
+                    {!readOnly && <>
+                      <form action={setSubmissionLockAction}>
+                        <input type="hidden" name="assessmentId" value={assessmentId} />
+                        <input type="hidden" name="submissionId" value={submission.id} />
+                        <input type="hidden" name="locked" value={submission.locked ? "false" : "true"} />
+                        <button className={`focus-ring rounded-lg border px-3 py-2 text-xs font-bold ${submission.locked ? "border-emerald-200 text-emerald-700 hover:bg-emerald-50" : "border-brand-border text-brand-text hover:bg-brand-background"}`}>{submission.locked ? "Unlock submission" : "Lock submission"}</button>
+                      </form>
+                      <button type="button" onClick={() => setEditingSubmission(submission)} className="focus-ring rounded-lg border border-brand-border px-3 py-2 text-xs font-bold text-brand-primary hover:bg-brand-background">Adjust scores</button>
+                    </>}
                   </div>
                 </div>
 
@@ -165,7 +174,7 @@ export default function GroupSubmissionView({ assessmentId, groups, weekNumbers,
                 {editingSubmission.scores.map((score) => (
                   <label key={score.targetStudentId} className="flex items-center justify-between gap-4 rounded-lg border border-brand-border p-3 text-sm font-semibold">
                     <span>{score.targetStudentName}<span className="mt-0.5 block text-xs font-normal text-brand-muted">Student allocation: {score.originalPoints}</span></span>
-                    <input required type="number" min={0} max={100} step={1} name={`score:${score.targetStudentId}`} defaultValue={score.points} className="focus-ring h-10 w-24 rounded-lg border border-brand-border px-3 text-right font-bold" />
+                    <input required type="number" min={0} max={100} step={0.1} name={`score:${score.targetStudentId}`} defaultValue={score.points} className="focus-ring h-10 w-24 rounded-lg border border-brand-border px-3 text-right font-bold" />
                   </label>
                 ))}
               </div>
@@ -196,5 +205,5 @@ function submissionIsComplete(submission: Submission, memberIds: Set<string>) {
   const scoreIds = new Set(submission.scores.map((score) => score.targetStudentId));
   return scoreIds.size === memberIds.size
     && [...memberIds].every((id) => scoreIds.has(id))
-    && submission.scores.reduce((sum, score) => sum + score.points, 0) === 100;
+    && Math.round(submission.scores.reduce((sum, score) => sum + score.points, 0) * 10) === 1000;
 }

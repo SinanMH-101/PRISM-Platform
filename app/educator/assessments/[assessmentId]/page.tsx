@@ -8,6 +8,7 @@ import EducatorAssessmentViews from "@/components/educator/EducatorAssessmentVie
 import GroupSubmissionView from "@/components/educator/GroupSubmissionView";
 import { educatorLogoutAction } from "../../actions";
 import { BrandIdentity } from "@/components/BrandingProvider";
+import { finaliseOverdueSubmissions } from "@/lib/overdue-submissions";
 
 export default async function EducatorAssessmentPage({
   params,
@@ -22,6 +23,13 @@ export default async function EducatorAssessmentPage({
   const { assessmentId } = await params;
   const requestedView = (await searchParams).view;
   const initialView = requestedView === "dashboard" || requestedView === "groupView" || requestedView === "groups" ? requestedView : "groups";
+  const canAccessAssessment = await prisma.assessmentEducator.findFirst({
+    where: { assessmentId, userId: educator.id, status: "JOINED", removedAt: null, assessment: { deletedAt: null } },
+    select: { id: true },
+  });
+  if (!canAccessAssessment) notFound();
+  await finaliseOverdueSubmissions(assessmentId);
+
   const invite = await prisma.assessmentEducator.findFirst({
     where: {
       assessmentId,
@@ -113,7 +121,14 @@ export default async function EducatorAssessmentPage({
               className: group.className,
               educatorName: group.educator?.name ?? null,
               members: group.members.map((member) => ({ studentId: member.studentId })),
-              submissions: group.submissions,
+              submissions: group.submissions.map((submission) => ({
+                ...submission,
+                scores: submission.scores.map((score) => ({
+                  ...score,
+                  points: Number(score.points),
+                  educatorOverridePoints: score.educatorOverridePoints === null ? null : Number(score.educatorOverridePoints),
+                })),
+              })),
             }))}
           />
         }
@@ -134,12 +149,13 @@ export default async function EducatorAssessmentPage({
                 id: submission.id,
                 weekNumber: submission.assessmentWeek.weekNumber,
                 submittedAt: submission.submittedAt.toISOString(),
+                locked: submission.locked,
                 submittedBy: submission.submittedBy,
                 scores: submission.scores.map((score) => ({
                   targetStudentId: score.targetStudentId,
                   targetStudentName: score.targetStudent.name,
-                  originalPoints: score.points,
-                  points: score.educatorOverridePoints ?? score.points,
+                  originalPoints: Number(score.points),
+                  points: Number(score.educatorOverridePoints ?? score.points),
                   overridden: score.educatorOverridePoints !== null,
                 })),
                 feedback: submission.feedback.map((item) => ({ toStudentId: item.toStudentId, toStudentName: item.toStudent.name, comment: item.comment })),

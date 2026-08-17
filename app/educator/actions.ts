@@ -265,14 +265,14 @@ export async function overrideContributionScoresAction(
     originalPoints: score.points,
     points: Number(formData.get(`score:${score.targetStudentId}`)),
   }));
-  if (overrides.some((score) => !Number.isInteger(score.points) || score.points < 0 || score.points > 100) || overrides.reduce((sum, score) => sum + score.points, 0) !== 100) {
-    return { status: "error", message: "Adjusted scores must be whole numbers totalling exactly 100." };
+  if (overrides.some((score) => !Number.isFinite(score.points) || score.points < 0 || score.points > 100 || Math.round(score.points * 10) !== score.points * 10) || Math.round(overrides.reduce((sum, score) => sum + score.points, 0) * 10) !== 1000) {
+    return { status: "error", message: "Adjusted scores must use no more than one decimal place and total exactly 100." };
   }
 
   const overriddenAt = new Date();
   await prisma.$transaction(overrides.map((score) => prisma.contributionScore.update({
     where: { id: score.id },
-    data: score.points === score.originalPoints
+    data: score.points === Number(score.originalPoints)
       ? { educatorOverridePoints: null, educatorOverriddenAt: null }
       : { educatorOverridePoints: score.points, educatorOverriddenAt: overriddenAt },
   })));
@@ -280,6 +280,34 @@ export async function overrideContributionScoresAction(
   revalidatePath(`/educator/assessments/${assessmentId}`);
   revalidatePath(`/student/assessments/${assessmentId}`);
   return { status: "success", message: "Adjusted scores saved. Students will see them marked as TA overrides." };
+}
+
+export async function setSubmissionLockAction(formData: FormData) {
+  const educator = await requireEducator();
+  const assessmentId = String(formData.get("assessmentId") ?? "");
+  const submissionId = String(formData.get("submissionId") ?? "");
+  const locked = formData.get("locked") === "true";
+
+  const submission = await prisma.submission.findFirst({
+    where: {
+      id: submissionId,
+      group: { class: { assessmentId } },
+      assessmentWeek: {
+        assessmentId,
+        assessment: {
+          deletedAt: null,
+          educators: { some: { userId: educator.id, status: "JOINED", removedAt: null } },
+        },
+      },
+    },
+    select: { id: true },
+  });
+
+  if (!submission) return;
+
+  await prisma.submission.update({ where: { id: submission.id }, data: { locked } });
+  revalidatePath(`/educator/assessments/${assessmentId}`);
+  revalidatePath(`/student/assessments/${assessmentId}`);
 }
 
 export async function addStudentAction(

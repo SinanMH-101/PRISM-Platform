@@ -17,6 +17,7 @@ export type StudentAssessmentData = {
     number: number;
     due: string;
     status: "OPEN" | "UPCOMING" | "LOCKED" | "SUBMITTED";
+    unlockedForEditing: boolean;
     scores: Record<string, number> | null;
     scoreOverrides: Record<string, boolean> | null;
     feedback: Record<string, string> | null;
@@ -48,8 +49,11 @@ function clamp(value: number, min: number, max: number) {
 
 function buildEvenAllocations(memberCount: number) {
   if (!memberCount) return [];
-  const base = Math.floor(100 / memberCount);
-  return Array.from({ length: memberCount }, (_, index) => base + (index < 100 - base * memberCount ? 1 : 0));
+  return Array.from({ length: memberCount }, () => 100 / memberCount);
+}
+
+function displayPoints(value: number) {
+  return Number(value.toFixed(1));
 }
 
 function allocationsToHandles(allocations: number[]) {
@@ -123,8 +127,14 @@ export default function StudentAssessmentPage({ data }: { data: StudentAssessmen
     setMessage(null);
   }
 
+  function equaliseContributions() {
+    if (isLocked) return;
+    setHandles(allocationsToHandles(buildEvenAllocations(data.members.length)));
+    setMessage(null);
+  }
+
   function handleSubmit() {
-    if (!window.confirm(`Submit Week ${week.number}? You cannot edit it afterwards.`)) return;
+    if (!window.confirm(`${week.unlockedForEditing ? "Resubmit" : "Submit"} Week ${week.number}? It will be locked after submission.`)) return;
     setMessage(null);
     startTransition(async () => {
       const result = await submitStudentAssessment({
@@ -138,7 +148,7 @@ export default function StudentAssessmentPage({ data }: { data: StudentAssessmen
         setMessage({ type: "error", text: result.error });
         return;
       }
-      setMessage({ type: "success", text: `Week ${week.number} was submitted and is now locked.` });
+      setMessage({ type: "success", text: `Week ${week.number} was ${week.unlockedForEditing ? "resubmitted" : "submitted"} and is now locked.` });
       router.refresh();
     });
   }
@@ -169,7 +179,7 @@ export default function StudentAssessmentPage({ data }: { data: StudentAssessmen
             <div className="space-y-2">
               {data.weeks.map((item) => (
                 <button key={item.id} onClick={() => selectWeek(item.id)} className={`focus-ring w-full rounded-xl border px-4 py-3 text-left transition ${item.id === week.id ? "border-brand-primary bg-brand-primary text-white" : "border-brand-border bg-white hover:bg-brand-background"}`}>
-                  <div className="flex items-center justify-between gap-2"><span className="font-semibold">Week {item.number}</span><span className={`rounded-full px-2 py-1 text-xs ${item.id === week.id ? "bg-white/15" : "bg-brand-background"}`}>{statusLabel(item.status)}</span></div>
+                  <div className="flex items-center justify-between gap-2"><span className="font-semibold">Week {item.number}</span><span className={`rounded-full px-2 py-1 text-xs ${item.id === week.id ? "bg-white/15" : "bg-brand-background"}`}>{statusLabel(item.status, item.unlockedForEditing)}</span></div>
                   <p className={`mt-1 text-xs ${item.id === week.id ? "text-white/75" : "text-brand-muted"}`}>Due {item.due}</p>
                 </button>
               ))}
@@ -178,23 +188,34 @@ export default function StudentAssessmentPage({ data }: { data: StudentAssessmen
         </aside>
 
         <div className="space-y-6">
+          {week.unlockedForEditing && <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5 text-emerald-800"><p className="font-bold">Your TA unlocked this submission.</p><p className="mt-1 text-sm">You can update your scores and feedback, then resubmit. It will lock again when submitted.</p></div>}
           <section className="rounded-2xl border border-brand-border bg-brand-surface p-6 shadow-soft">
             <div className="flex flex-col justify-between gap-4 md:flex-row md:items-start">
               <div><p className="text-sm font-semibold text-brand-primary">Week {week.number} submission</p><h2 className="mt-1 text-3xl font-bold">Allocate contribution points</h2><p className="mt-2 max-w-2xl text-sm text-brand-muted">Drag the dividers to split exactly 100 points across your group.</p></div>
-              <div className={`rounded-full px-4 py-2 text-sm font-semibold ${isLocked ? "bg-slate-100 text-slate-600" : "bg-emerald-50 text-emerald-700"}`}>{statusDescription(week.status)}</div>
+              <div className={`rounded-full px-4 py-2 text-sm font-semibold ${isLocked ? "bg-slate-100 text-slate-600" : "bg-emerald-50 text-emerald-700"}`}>{statusDescription(week.status, week.unlockedForEditing)}</div>
             </div>
             <div className="mt-8">
               {hasEducatorOverrides && <div className="mb-5 flex gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800"><span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-amber-500 font-bold text-white">!</span><p><span className="font-bold">Scores adjusted by your TA.</span> An exclamation mark identifies each updated contribution score.</p></div>}
               <div ref={trackRef} className="segment-slider relative h-16 rounded-2xl border border-brand-border bg-brand-background p-2">
-                <div className="flex h-full overflow-hidden rounded-xl">{allocations.map((allocation, index) => <div key={data.members[index].id} className="flex min-w-[2px] items-center justify-center text-xs font-bold text-white" style={{ width: `${allocation}%`, backgroundColor: studentColour(index) }} title={`${data.members[index].name}: ${allocation} points${week.scoreOverrides?.[data.members[index].id] ? " (adjusted by TA)" : ""}`}>{allocation >= 7 ? <>{allocation}{week.scoreOverrides?.[data.members[index].id] && <span className="ml-0.5">!</span>}</> : ""}</div>)}</div>
+                <div className="flex h-full overflow-hidden rounded-xl">{allocations.map((allocation, index) => <div key={data.members[index].id} className="flex min-w-[2px] items-center justify-center text-xs font-bold text-white" style={{ width: `${allocation}%`, backgroundColor: studentColour(index) }} title={`${data.members[index].name}: ${displayPoints(allocation)} points${week.scoreOverrides?.[data.members[index].id] ? " (adjusted by TA)" : ""}`}>{allocation >= 7 ? <>{displayPoints(allocation)}{week.scoreOverrides?.[data.members[index].id] && <span className="ml-0.5">!</span>}</> : ""}</div>)}</div>
                 {handles.map((handle, index) => <button key={index} aria-label={`Move divider ${index + 1}`} disabled={isLocked} onPointerDown={(event) => startDrag(event, index)} onPointerMove={(event) => event.buttons === 1 && updateHandle(index, event.clientX)} className="absolute top-1/2 h-12 w-5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-brand-primary shadow-lg disabled:cursor-not-allowed disabled:opacity-40" style={{ left: `${handle}%` }} />)}
               </div>
             </div>
           </section>
 
           <section className="rounded-2xl border border-brand-border bg-brand-surface p-6 shadow-soft">
-            <h3 className="text-xl font-bold">Contribution table</h3>
-            <div className="mt-5 overflow-x-auto rounded-xl border border-brand-border"><table className="w-full min-w-[640px] border-collapse text-left text-sm"><thead className="bg-brand-background text-brand-muted"><tr><th className="px-4 py-3">Student</th><th className="px-4 py-3">Email</th><th className="px-4 py-3">Points</th><th className="px-4 py-3">Share</th></tr></thead><tbody className="divide-y divide-brand-border bg-white">{data.members.map((member, index) => <tr key={member.id} className="border-l-4" style={{ borderLeftColor: studentColour(index) }}><td className="px-4 py-4"><div className="flex items-center gap-3"><div className="flex h-9 w-9 items-center justify-center rounded-full text-xs font-bold text-white" style={{ backgroundColor: studentColour(index) }}>{member.initials}</div><span className="font-semibold">{member.name}{member.id === data.currentStudent.id ? " (you)" : ""}</span></div></td><td className="px-4 py-4 text-brand-muted">{member.email}</td><td className="px-4 py-4 font-bold">{allocations[index]}{week.scoreOverrides?.[member.id] && <span className="ml-1 text-amber-600" title="Adjusted by TA">!</span>}</td><td className="px-4 py-4 text-brand-muted">{allocations[index]}%{week.scoreOverrides?.[member.id] && <span className="ml-1 font-bold text-amber-600" title="Adjusted by TA">!</span>}</td></tr>)}</tbody></table></div>
+            <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+              <h3 className="text-xl font-bold">Contribution table</h3>
+              <button
+                type="button"
+                onClick={equaliseContributions}
+                disabled={isLocked}
+                className="focus-ring rounded-xl border border-brand-primary px-4 py-2 text-sm font-semibold text-brand-primary hover:bg-brand-primary hover:text-white disabled:cursor-not-allowed disabled:border-brand-border disabled:bg-slate-100 disabled:text-slate-500"
+              >
+                Equal contributions
+              </button>
+            </div>
+            <div className="mt-5 overflow-x-auto rounded-xl border border-brand-border"><table className="w-full min-w-[640px] border-collapse text-left text-sm"><thead className="bg-brand-background text-brand-muted"><tr><th className="px-4 py-3">Student</th><th className="px-4 py-3">Email</th><th className="px-4 py-3">Points</th><th className="px-4 py-3">Share</th></tr></thead><tbody className="divide-y divide-brand-border bg-white">{data.members.map((member, index) => <tr key={member.id} className="border-l-4" style={{ borderLeftColor: studentColour(index) }}><td className="px-4 py-4"><div className="flex items-center gap-3"><div className="flex h-9 w-9 items-center justify-center rounded-full text-xs font-bold text-white" style={{ backgroundColor: studentColour(index) }}>{member.initials}</div><span className="font-semibold">{member.name}{member.id === data.currentStudent.id ? " (you)" : ""}</span></div></td><td className="px-4 py-4 text-brand-muted">{member.email}</td><td className="px-4 py-4 font-bold">{displayPoints(allocations[index])}{week.scoreOverrides?.[member.id] && <span className="ml-1 text-amber-600" title="Adjusted by TA">!</span>}</td><td className="px-4 py-4 text-brand-muted">{displayPoints(allocations[index])}%{week.scoreOverrides?.[member.id] && <span className="ml-1 font-bold text-amber-600" title="Adjusted by TA">!</span>}</td></tr>)}</tbody></table></div>
           </section>
 
           <section className="rounded-2xl border border-brand-border bg-brand-surface p-6 shadow-soft">
@@ -270,7 +291,7 @@ export default function StudentAssessmentPage({ data }: { data: StudentAssessmen
           </section>
 
           {message && <div className={`rounded-2xl border p-5 ${message.type === "success" ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-red-200 bg-red-50 text-red-800"}`} role="status">{message.text}</div>}
-          <section className="flex flex-col items-stretch justify-between gap-3 rounded-2xl border border-brand-border bg-brand-surface p-5 shadow-soft sm:flex-row sm:items-center"><div><p className="font-semibold">Submit Week {week.number}</p><p className="text-sm text-brand-muted">Submission is final and cannot be edited.</p></div><button onClick={handleSubmit} disabled={isLocked || isPending} className="focus-ring rounded-xl bg-brand-primary px-5 py-3 font-semibold text-white hover:opacity-90 disabled:cursor-not-allowed disabled:bg-slate-300">{isPending ? "Submitting..." : week.status === "SUBMITTED" ? "Already submitted" : week.status === "UPCOMING" ? "Not open yet" : week.status === "LOCKED" ? "Submission locked" : "Submit weekly assessment"}</button></section>
+          <section className="flex flex-col items-stretch justify-between gap-3 rounded-2xl border border-brand-border bg-brand-surface p-5 shadow-soft sm:flex-row sm:items-center"><div><p className="font-semibold">{week.unlockedForEditing ? "Resubmit" : "Submit"} Week {week.number}</p><p className="text-sm text-brand-muted">{week.unlockedForEditing ? "Your changes will be locked again after resubmission." : "Submission is final unless an educator unlocks it."}</p></div><button onClick={handleSubmit} disabled={isLocked || isPending} className="focus-ring rounded-xl bg-brand-primary px-5 py-3 font-semibold text-white hover:opacity-90 disabled:cursor-not-allowed disabled:bg-slate-300">{isPending ? "Submitting..." : week.status === "SUBMITTED" ? "Already submitted" : week.status === "UPCOMING" ? "Not open yet" : week.status === "LOCKED" ? "Submission locked" : week.unlockedForEditing ? "Resubmit weekly assessment" : "Submit weekly assessment"}</button></section>
         </div>
       </section>
     </main>
@@ -278,6 +299,6 @@ export default function StudentAssessmentPage({ data }: { data: StudentAssessmen
 }
 
 function Info({ label, value }: { label: string; value: string }) { return <div className="rounded-xl bg-brand-background p-3"><p className="text-brand-muted">{label}</p><p className="font-semibold">{value}</p></div>; }
-function statusLabel(status: StudentAssessmentData["weeks"][number]["status"]) { return status === "SUBMITTED" ? "Submitted" : status === "OPEN" ? "Open" : status === "UPCOMING" ? "Upcoming" : "Locked"; }
-function statusDescription(status: StudentAssessmentData["weeks"][number]["status"]) { return status === "SUBMITTED" ? "Submitted — locked" : status === "OPEN" ? "Open for submission" : status === "UPCOMING" ? "Submission window not open" : "Deadline passed"; }
+function statusLabel(status: StudentAssessmentData["weeks"][number]["status"], unlocked = false) { return unlocked ? "Unlocked" : status === "SUBMITTED" ? "Submitted" : status === "OPEN" ? "Open" : status === "UPCOMING" ? "Upcoming" : "Locked"; }
+function statusDescription(status: StudentAssessmentData["weeks"][number]["status"], unlocked = false) { return unlocked ? "Unlocked by educator" : status === "SUBMITTED" ? "Submitted — locked" : status === "OPEN" ? "Open for submission" : status === "UPCOMING" ? "Submission window not open" : "Deadline passed"; }
 function EmptyState({ data, text }: { data: StudentAssessmentData; text: string }) { return <main className="min-h-screen bg-brand-background px-5 py-16 text-brand-text"><div className="mx-auto max-w-2xl rounded-2xl border border-brand-border bg-brand-surface p-8 text-center shadow-soft"><h1 className="text-2xl font-bold">{data.assessment.name}</h1><p className="mt-3 text-brand-muted">{text}</p><Link href="/student/dashboard" className="focus-ring mt-6 inline-block rounded-lg border border-brand-border bg-brand-surface px-4 py-3 font-semibold hover:border-brand-primary hover:bg-brand-primary hover:text-white">Back to home</Link></div></main>; }

@@ -5,6 +5,7 @@ import EducatorAssessmentViews from "@/components/educator/EducatorAssessmentVie
 import EducatorProgressDashboard from "@/components/educator/EducatorProgressDashboard";
 import GroupSubmissionView from "@/components/educator/GroupSubmissionView";
 import { prisma } from "@/lib/prisma";
+import { finaliseOverdueSubmissions } from "@/lib/overdue-submissions";
 
 export default async function AdminAssessmentWorkspacePage({
   params,
@@ -16,6 +17,7 @@ export default async function AdminAssessmentWorkspacePage({
   const { assessmentId } = await params;
   const requestedView = (await searchParams).view;
   const initialView = requestedView === "dashboard" || requestedView === "groupView" || requestedView === "groups" ? requestedView : "groups";
+  await finaliseOverdueSubmissions(assessmentId);
   const assessment = await prisma.assessment.findFirst({
     where: { id: assessmentId, deletedAt: null },
     include: {
@@ -59,8 +61,8 @@ export default async function AdminAssessmentWorkspacePage({
         initialView={initialView}
         sidebar={<section className="rounded-lg border border-brand-border bg-brand-surface p-5 shadow-soft"><p className="text-sm font-semibold text-brand-primary">{assessment.unitCode}</p><h2 className="mt-1 text-2xl font-bold">{assessment.name}</h2><div className="mt-5 grid gap-3 text-sm"><div className="rounded-lg bg-brand-background p-3"><p className="font-semibold">Students per group</p><p className="mt-1 text-brand-muted">{assessment.studentsPerGroup}</p></div><div className="rounded-lg bg-brand-background p-3"><p className="font-semibold">Groups created</p><p className="mt-1 text-brand-muted">{groups.length}</p></div></div></section>}
         groupManager={<AdminGroupOverview groups={groups} studentsPerGroup={assessment.studentsPerGroup} />}
-        dashboard={<EducatorProgressDashboard currentEducatorName="" weeks={assessment.weeks} groups={groups.map((group) => ({ id: group.id, name: group.name, className: group.className, educatorName: group.educator?.name ?? null, members: group.members.map((member) => ({ studentId: member.studentId })), submissions: group.submissions }))} />}
-        groupView={<GroupSubmissionView readOnly assessmentId={assessment.id} weekNumbers={assessment.weeks.map((week) => week.weekNumber)} groups={groups.map((group) => ({ id: group.id, name: group.name, className: group.className, educatorName: group.educator?.name ?? null, members: group.members.map((member) => ({ id: member.student.id, name: member.student.name })), submissions: group.submissions.map((submission) => ({ id: submission.id, weekNumber: submission.assessmentWeek.weekNumber, submittedAt: submission.submittedAt.toISOString(), submittedBy: submission.submittedBy, scores: submission.scores.map((score) => ({ targetStudentId: score.targetStudentId, targetStudentName: score.targetStudent.name, originalPoints: score.points, points: score.educatorOverridePoints ?? score.points, overridden: score.educatorOverridePoints !== null })), feedback: submission.feedback.map((item) => ({ toStudentId: item.toStudentId, toStudentName: item.toStudent.name, comment: item.comment })) })) }))} />}
+        dashboard={<EducatorProgressDashboard currentEducatorName="" weeks={assessment.weeks} groups={groups.map((group) => ({ id: group.id, name: group.name, className: group.className, educatorName: group.educator?.name ?? null, members: group.members.map((member) => ({ studentId: member.studentId })), submissions: group.submissions.map((submission) => ({ ...submission, scores: submission.scores.map((score) => ({ ...score, points: Number(score.points), educatorOverridePoints: score.educatorOverridePoints === null ? null : Number(score.educatorOverridePoints) })) })) }))} />}
+        groupView={<GroupSubmissionView readOnly assessmentId={assessment.id} weekNumbers={assessment.weeks.map((week) => week.weekNumber)} groups={groups.map((group) => ({ id: group.id, name: group.name, className: group.className, educatorName: group.educator?.name ?? null, members: group.members.map((member) => ({ id: member.student.id, name: member.student.name })), submissions: group.submissions.map((submission) => ({ id: submission.id, weekNumber: submission.assessmentWeek.weekNumber, submittedAt: submission.submittedAt.toISOString(), locked: submission.locked, submittedBy: submission.submittedBy, scores: submission.scores.map((score) => ({ targetStudentId: score.targetStudentId, targetStudentName: score.targetStudent.name, originalPoints: Number(score.points), points: Number(score.educatorOverridePoints ?? score.points), overridden: score.educatorOverridePoints !== null })), feedback: submission.feedback.map((item) => ({ toStudentId: item.toStudentId, toStudentName: item.toStudent.name, comment: item.comment })) })) }))} />}
       />
     </div>
   );
